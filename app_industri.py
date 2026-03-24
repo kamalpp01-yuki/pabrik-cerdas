@@ -9,7 +9,7 @@ st.title("🏭 Smart Factory: Database Online Edition")
 
 # --- KONEKSI KE GOOGLE SHEETS ---
 # Masukkan Link Google Sheets kamu di sini
-URL_SHEET = "PASTE_LINK_GOOGLE_SHEETS_KAMU_DI_SINI"
+URL_SHEET = "https://docs.google.com/spreadsheets/d/1uah8TpZTlsdovZT8xKtlh_HmqjUMOJKWkgM33f9YG7M/edit?usp=sharing"
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
