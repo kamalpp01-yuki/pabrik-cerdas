@@ -56,3 +56,18 @@ def jalankan(df_uang, conn):
                 c3.metric("💎 Saldo Bersih (Profit)", f"Rp {saldo:,.0f}".replace(",", "."))
             else:
                 c3.metric("⚠️ Saldo Minus (Rugi)", f"Rp {saldo:,.0f}".replace(",", "."))
+
+            # --- FITUR DOWNLOAD LAPORAN ---
+            st.divider() # Bikin garis pembatas
+            
+            # Ubah data tabel menjadi format CSV
+            csv = df_uang.to_csv(index=False).encode('utf-8')
+            
+            # Bikin tombol download
+            st.download_button(
+                label="📥 Download Laporan Keuangan (CSV)",
+                data=csv,
+                file_name=f"Laporan_Keuangan_Topi_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                use_container_width=True # Biar tombolnya panjang dan rapi
+            )
