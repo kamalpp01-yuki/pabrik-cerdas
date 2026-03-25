@@ -28,9 +28,8 @@ def jalankan(df_bahan, df_jadi, conn):
                 # 2. INTEGRASI KE KEUANGAN (CATAT PENGELUARAN)
                 if harga_beli > 0:
                     try:
-                        df_uang = conn.read(worksheet="Keuangan", usecols=[0,1,2,3])
+                        df_uang = conn.read(worksheet="Keuangan")
                         df_uang = df_uang.dropna(how="all")
-                        df_uang.columns = ["Tanggal", "Keterangan", "Pemasukan (Rp)", "Pengeluaran (Rp)"]
                     except Exception:
                         df_uang = pd.DataFrame(columns=["Tanggal", "Keterangan", "Pemasukan (Rp)", "Pengeluaran (Rp)"])
 
@@ -51,7 +50,7 @@ def jalankan(df_bahan, df_jadi, conn):
         st.markdown("### 🏭 Gudang Bahan Baku (Material)")
         st.dataframe(df_bahan, use_container_width=True)
         
-        # BIKIN PROGRESS BAR UNTUK BAHAN BAKU
+        # --- REVISI 1: PERINGATAN BAHAN HABIS / MENIPIS ---
         df_bahan['Stok'] = pd.to_numeric(df_bahan['Stok'], errors='coerce').fillna(0)
         df_bahan['Max Kapasitas'] = pd.to_numeric(df_bahan['Max Kapasitas'], errors='coerce').fillna(1000)
         
@@ -60,7 +59,10 @@ def jalankan(df_bahan, df_jadi, conn):
             maks = row['Max Kapasitas']
             persentase = min(stok / maks, 1.0) if maks > 0 else 0
             
-            if persentase < 0.1:
+            # Logika Peringatan
+            if stok <= 0:
+                st.error(f"🚨 BAHAN HABIS: {row['Nama Bahan']} kosong (0 {row['Satuan']})! Segera Restock.")
+            elif persentase < 0.1:
                 st.warning(f"⚠️ Stok {row['Nama Bahan']} menipis! Sisa {stok} {row['Satuan']}.")
             
             st.progress(persentase, text=f"Kapasitas {row['Nama Bahan']}: {stok}/{maks} {row['Satuan']}")
@@ -70,12 +72,22 @@ def jalankan(df_bahan, df_jadi, conn):
         st.markdown("### 🛍️ Gudang Barang Jadi (Siap Jual)")
         st.dataframe(df_jadi, use_container_width=True)
         
-        # BIKIN PROGRESS BAR UNTUK BARANG JADI
+        # --- REVISI 2: KAPASITAS AKUMULASI GUDANG BARANG JADI ---
         df_jadi['Stok'] = pd.to_numeric(df_jadi['Stok'], errors='coerce').fillna(0)
-        df_jadi['Max Kapasitas'] = pd.to_numeric(df_jadi['Max Kapasitas'], errors='coerce').fillna(500)
         
-        for index, row in df_jadi.iterrows():
-            stok = row['Stok']
-            maks = row['Max Kapasitas']
-            persentase = min(stok / maks, 1.0) if maks > 0 else 0
-            st.progress(persentase, text=f"Kapasitas {row['Model Topi']}: {stok}/{maks} {row['Satuan']}")
+        # Hitung total semua topi yang ada di gudang
+        total_stok_jadi = df_jadi['Stok'].sum()
+        
+        # Tentukan Kapasitas Maksimal Ruangan Gudang (Misal: Ruangan cuma muat 2000 Pcs Topi)
+        KAPASITAS_MAX_GUDANG = 2000 
+        
+        persentase_gudang = min(total_stok_jadi / KAPASITAS_MAX_GUDANG, 1.0)
+        
+        # Logika Peringatan Gudang Penuh
+        if persentase_gudang >= 1.0:
+            st.error(f"🚨 GUDANG PENUH! Tidak bisa menampung barang jadi lagi. (Total: {total_stok_jadi} Pcs)")
+        elif persentase_gudang > 0.8:
+            st.warning(f"⚠️ Hati-hati, Ruangan Gudang hampir penuh! ({total_stok_jadi}/{KAPASITAS_MAX_GUDANG} Pcs)")
+            
+        # Satu Progress Bar Besar untuk seluruh Gudang
+        st.progress(persentase_gudang, text=f"📊 Status Kapasitas Ruangan Gudang: {total_stok_jadi} / {KAPASITAS_MAX_GUDANG} Pcs")
