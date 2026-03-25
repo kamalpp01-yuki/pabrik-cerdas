@@ -122,6 +122,14 @@ def main_app():
         st.markdown("Ringkasan performa pabrik topi secara *real-time*.")
         
         try:
+            # --- TAMBAHKAN SPINNER DI SINI ---
+            with st.spinner("⏳ Mengambil data terbaru dari server..."):
+                # 1. Sedot semua data dari seluruh divisi
+                df_pem = conn.read(worksheet="Pemasaran").dropna(how="all")
+                df_uang = conn.read(worksheet="Keuangan").dropna(how="all")
+                df_prod = conn.read(worksheet="Produksi").dropna(how="all")
+                df_jadi = conn.read(worksheet="Barang_Jadi").dropna(how="all")
+
             # 1. Sedot semua data dari seluruh divisi
             df_pem = conn.read(worksheet="Pemasaran").dropna(how="all")
             df_uang = conn.read(worksheet="Keuangan").dropna(how="all")
