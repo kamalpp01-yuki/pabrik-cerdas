@@ -41,10 +41,9 @@ def jalankan(df_pem, df_prod, df_bahan, df_jadi, conn):
                     """)
 
                     if st.button("✂️ Mulai Jahit & Potong Bahan", key=f"jahit_{row['ID Order']}"):
-                        # A. POTONG STOK DI GUDANG BAHAN BAKU
+                        # A. POTONG STOK DI GUDANG BAHAN BAKU (Pakai .astype(str) biar kebal error)
                         df_bahan['Stok'] = pd.to_numeric(df_bahan['Stok'], errors='coerce').fillna(0)
                         
-                        # Kita pakai 'str.contains' biar cerdas cari nama bahan walaupun ngetiknya beda
                         df_bahan.loc[df_bahan['Nama Bahan'].astype(str).str.contains('Kain', case=False, na=False), 'Stok'] -= butuh_kain
                         df_bahan.loc[df_bahan['Nama Bahan'].astype(str).str.contains('Benang', case=False, na=False), 'Stok'] -= butuh_benang
                         df_bahan.loc[df_bahan['Nama Bahan'].astype(str).str.contains('Pengait', case=False, na=False), 'Stok'] -= butuh_pengait
@@ -82,35 +81,42 @@ def jalankan(df_pem, df_prod, df_bahan, df_jadi, conn):
                     st.info(f"⚙️ **{row['ID Produksi']}** | {row['Model Topi']} ({row['Jumlah (Pcs)']} Pcs)")
                     
                     if st.button("✅ Lulus QC & Masukkan ke Gudang Barang Jadi", key=f"qc_{row['ID Produksi']}"):
-                        
-                        # A. TAMBAH STOK KE GUDANG BARANG JADI (AUTO-CREATE)
-                        jml = int(row['Jumlah (Pcs)'])
-                        df_jadi['Stok'] = pd.to_numeric(df_jadi['Stok'], errors='coerce').fillna(0)
-                        
-                        # Cek apakah topinya sudah ada di Gudang?
-                        if row['Model Topi'] in df_jadi['Model Topi'].values:
-                            # Kalau sudah ada, tinggal tambahkan angkanya
-                            df_jadi.loc[df_jadi['Model Topi'] == row['Model Topi'], 'Stok'] += jml
-                        else:
-                            # Kalau belum ada, bikin baris baru otomatis!
-                            data_jadi_baru = pd.DataFrame([{
-                                "Model Topi": row['Model Topi'],
-                                "Stok": jml,
-                                "Satuan": "Pcs",
-                                "Max Kapasitas": 500
-                            }])
-                            df_jadi = pd.concat([df_jadi, data_jadi_baru], ignore_index=True)
+                        try: # <--- PERANGKAP ERROR ANTI-CRASH
+                            # A. TAMBAH STOK KE GUDANG BARANG JADI (SUPER AMAN)
+                            jml = int(row['Jumlah (Pcs)'])
+                            model_topi = str(row['Model Topi'])
                             
-                        conn.update(worksheet="Barang_Jadi", data=df_jadi)
+                            # Pastikan kolom Stok berupa angka, kalau kolom belum ada, buatin.
+                            if 'Stok' not in df_jadi.columns:
+                                df_jadi['Stok'] = 0
+                            df_jadi['Stok'] = pd.to_numeric(df_jadi['Stok'], errors='coerce').fillna(0)
+                            
+                            # Cek apakah model topi sudah ada di Gudang pakai teks mutlak (.astype(str))
+                            if model_topi in df_jadi['Model Topi'].astype(str).values:
+                                df_jadi.loc[df_jadi['Model Topi'].astype(str) == model_topi, 'Stok'] += jml
+                            else:
+                                data_jadi_baru = pd.DataFrame([{
+                                    "Model Topi": model_topi,
+                                    "Stok": jml,
+                                    "Satuan": "Pcs",
+                                    "Max Kapasitas": 500
+                                }])
+                                df_jadi = pd.concat([df_jadi, data_jadi_baru], ignore_index=True)
+                                
+                            conn.update(worksheet="Barang_Jadi", data=df_jadi)
 
-                        # B. UPDATE STATUS PRODUKSI
-                        df_prod.loc[df_prod['ID Produksi'] == row['ID Produksi'], 'Status Produksi'] = 'Selesai & Masuk Gudang'
-                        conn.update(worksheet="Produksi", data=df_prod)
+                            # B. UPDATE STATUS PRODUKSI
+                            df_prod.loc[df_prod['ID Produksi'] == row['ID Produksi'], 'Status Produksi'] = 'Selesai & Masuk Gudang'
+                            conn.update(worksheet="Produksi", data=df_prod)
 
-                        # C. UPDATE STATUS PEMASARAN
-                        df_pem.loc[df_pem['ID Order'] == row['ID Order'], 'Status Validasi'] = 'Selesai & Masuk Gudang'
-                        conn.update(worksheet="Pemasaran", data=df_pem)
+                            # C. UPDATE STATUS PEMASARAN
+                            df_pem.loc[df_pem['ID Order'] == row['ID Order'], 'Status Validasi'] = 'Selesai & Masuk Gudang'
+                            conn.update(worksheet="Pemasaran", data=df_pem)
 
-                        st.cache_data.clear()
-                        st.success("✅ Topi lulus QC dan sudah terpajang di Gudang Barang Jadi!")
-                        st.rerun()
+                            st.cache_data.clear()
+                            st.success("✅ Topi lulus QC dan sudah terpajang di Gudang Barang Jadi!")
+                            st.rerun()
+                            
+                        except Exception as e:
+                            # Kalau masih error, tulisan merah aslinya akan dimunculkan!
+                            st.error(f"🚨 TANGKAP ERROR: {e}")
