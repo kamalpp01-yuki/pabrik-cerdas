@@ -3,63 +3,76 @@ import pandas as pd
 from datetime import datetime
 import os
 
-def jalankan(df_pemasaran, conn):
-    # Jurus Engineer: Bikin folder otomatis kalau foldernya belum ada
-    if not os.path.exists("desain_topi"):
-        os.makedirs("desain_topi")
+def jalankan(df_pem, conn):
+    st.markdown("## 🤝 Modul Pemasaran & Order")
+    st.write("Kelola pesanan klien dan *upload* desain dengan mudah.")
+    st.divider()
 
-    col1, col2 = st.columns([1, 2])
+    # BIKIN SISTEM TAB YANG ELEGAN
+    tab1, tab2 = st.tabs(["📝 Form Pesanan Baru", "📋 Database Pesanan Klien"])
 
-    with col1:
-        st.subheader("📝 Input Pesanan Baru (Sales)")
-        with st.form("form_pesanan", clear_on_submit=True):
-            nama_klien = st.text_input("Nama Klien / Perusahaan")
-            model = st.selectbox("Model Topi", ["Topi Baseball", "Topi Rimba", "Topi Trucker"])
-            jumlah = st.number_input("Jumlah (Pcs)", min_value=1, value=50)
-            harga_total = st.number_input("Total Harga Kesepakatan (Rp)", min_value=10000, step=50000)
+    # ==========================================
+    # TAB 1: FORM INPUT (LEBIH LEGA)
+    # ==========================================
+    with tab1:
+        st.markdown("### ➕ Buat Pesanan Baru")
+        
+        # Form kita bagi 2 kolom biar gak kepanjangan ke bawah
+        with st.form("form_order_baru", clear_on_submit=True):
+            col_kiri, col_kanan = st.columns(2)
             
-            # FITUR SAKTI: Upload Gambar Desain
-            file_desain = st.file_uploader("Upload Desain Topi (JPG/PNG)", type=['png', 'jpg', 'jpeg'])
-            
-            submit = st.form_submit_button("💾 Simpan Pesanan")
+            with col_kiri:
+                nama_klien = st.text_input("Nama Klien / Instansi", placeholder="Misal: PT Maju Jaya")
+                model_topi = st.selectbox("Model Topi", ["Topi Baseball", "Topi Rimba", "Topi Trucker", "Topi Bucket"])
+                jumlah = st.number_input("Jumlah (Pcs)", min_value=1, value=50)
+                
+            with col_kanan:
+                harga = st.number_input("Total Harga Keseluruhan (Rp)", min_value=0, step=50000)
+                file_desain = st.file_uploader("Upload Desain Topi (JPG/PNG)", type=["jpg", "png", "jpeg"])
 
-            if submit:
-                if nama_klien == "":
-                    st.error("⚠️ Nama Klien tidak boleh kosong!")
-                elif file_desain is None:
-                    st.error("⚠️ File Desain topi wajib di-upload!")
+            st.markdown("<br>", unsafe_allow_html=True) # Spasi kosong
+            submit_btn = st.form_submit_button("💾 Simpan & Teruskan ke Keuangan", use_container_width=True)
+
+            if submit_btn:
+                if nama_klien == "" or harga <= 0:
+                    st.error("⚠️ Nama Klien dan Harga harus diisi!")
                 else:
-                    # 1. Simpan Gambar ke dalam folder 'desain_topi'
-                    # Kita kasih nama unik biar file gak ketimpa kalau namanya sama
-                    nama_file_unik = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{file_desain.name}"
-                    lokasi_simpan = os.path.join("desain_topi", nama_file_unik)
+                    # Logika ID dan Upload (Sama seperti sebelumnya, tapi UI lebih rapi)
+                    id_order = f"ORD-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+                    nama_file_simpan = "Tidak Ada Desain"
                     
-                    with open(lokasi_simpan, "wb") as f:
-                        f.write(file_desain.getbuffer())
+                    if file_desain is not None:
+                        if not os.path.exists("desain_topi"):
+                            os.makedirs("desain_topi")
+                        nama_file_simpan = f"{id_order}_{file_desain.name}"
+                        with open(os.path.join("desain_topi", nama_file_simpan), "wb") as f:
+                            f.write(file_desain.getbuffer())
 
-                    # 2. Bikin ID Order Otomatis (Contoh: ORD-240325-1030)
-                    id_order = f"ORD-{datetime.now().strftime('%y%m%d-%H%M')}"
-                    tanggal_sekarang = datetime.now().strftime("%Y-%m-%d")
-
-                    # 3. Simpan Data ke Google Sheets (Tab Pemasaran)
                     data_baru = pd.DataFrame([{
                         "ID Order": id_order,
-                        "Tanggal": tanggal_sekarang,
+                        "Tanggal": datetime.now().strftime("%Y-%m-%d"),
                         "Nama Klien": nama_klien,
-                        "Model Topi": model,
+                        "Model Topi": model_topi,
                         "Jumlah (Pcs)": jumlah,
-                        "Total Harga": harga_total,
-                        "File Desain": nama_file_unik,
-                        "Status Validasi": "Menunggu Pembayaran" # Status awal yang akan dicegat Keuangan
+                        "Total Harga": harga,
+                        "File Desain": nama_file_simpan,
+                        "Status Validasi": "Menunggu Pembayaran"
                     }])
 
-                    df_update = pd.concat([df_pemasaran, data_baru], ignore_index=True)
+                    df_update = pd.concat([df_pem, data_baru], ignore_index=True)
                     conn.update(worksheet="Pemasaran", data=df_update)
                     
                     st.cache_data.clear()
-                    st.success(f"✅ Pesanan {id_order} berhasil dibuat! Status: Menunggu validasi Keuangan.")
+                    st.success(f"✅ Pesanan {nama_klien} berhasil disimpan! Menunggu validasi Keuangan.")
                     st.rerun()
 
-    with col2:
-        st.subheader("📋 Daftar Pesanan (Sales Order)")
-        st.dataframe(df_pemasaran, use_container_width=True)
+    # ==========================================
+    # TAB 2: TABEL DATABASE
+    # ==========================================
+    with tab2:
+        st.markdown("### 📋 Seluruh Data Pesanan Masuk")
+        if df_pem.empty:
+            st.info("Belum ada data pesanan masuk.")
+        else:
+            # Tampilkan dataframe dengan lebar penuh
+            st.dataframe(df_pem, use_container_width=True, height=400)
