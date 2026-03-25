@@ -3,6 +3,7 @@ import pandas as pd
 from streamlit_gsheets import GSheetsConnection
 from datetime import datetime
 import modul_gudang # Pastikan file ini ada di folder yang sama
+import modul_keuangan
 
 # --- 1. PENGATURAN HALAMAN & LOGIN ---
 st.set_page_config(page_title="ERP Konveksi Sepatu", layout="wide")
@@ -65,7 +66,7 @@ def main_app():
         with col1:
             st.subheader("Input Pesanan")
             with st.form("form_prod", clear_on_submit=True):
-                model = st.selectbox("Model Sepatu", ["Sneakers Kasual", "Sepatu Pantofel", "Sepatu Boots Safety"])
+                model = st.selectbox("Model Sepatu", ["Topi Baseball", "Topi klasik", "Topi casual"])
                 jumlah = st.number_input("Jumlah (Pasang)", min_value=1, value=20)
                 if st.form_submit_button("Catat Produksi"):
                     # Rumus BOM (Bill of Materials)
@@ -99,7 +100,7 @@ def main_app():
         # Lempar dataframe dan koneksi ke file modul_gudang.py
         modul_gudang.jalankan(df_gudang, conn)
 
-    # ==========================================
+# ==========================================
     # MODUL 3: KEUANGAN
     # ==========================================
     elif menu == "💰 Keuangan (Finance)":
@@ -107,8 +108,8 @@ def main_app():
         kolom_keuangan = ["Tanggal", "Keterangan", "Pemasukan (Rp)", "Pengeluaran (Rp)"]
         df_uang = get_data("Keuangan", [0,1,2,3], kolom_keuangan)
         
-        st.dataframe(df_uang, use_container_width=True)
-        st.info("💡 Fitur input nota dan hitung profit akan kita bangun di tahap selanjutnya!")
+        # LEMPAR TUGASNYA KE FILE KEUANGAN!
+        modul_keuangan.jalankan(df_uang, conn)
 
 # --- 4. SAKLAR UTAMA ---
 if not st.session_state.logged_in:
