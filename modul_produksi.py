@@ -90,13 +90,16 @@ def jalankan(df_pem, df_prod, df_bahan, df_jadi, conn):
                         stok_benang = df_bahan.loc[df_bahan['Nama Bahan'].astype(str).str.contains('Benang', case=False, na=False), 'Stok'].sum()
                         stok_pengait = df_bahan.loc[df_bahan['Nama Bahan'].astype(str).str.contains('Pengait', case=False, na=False), 'Stok'].sum()
 
-                        # Tombol Cek Bahan Baku (Session State)
-                        kunci_cek = f"cek_{row['ID Order']}"
-                        if st.button("🔍 Cek Ketersediaan Bahan Baku", key=kunci_cek):
-                            st.session_state[kunci_cek] = True
+                        # --- PERBAIKAN BUG DI SINI ---
+                        # Kita pisahkan kunci untuk memori status dan kunci untuk tombol
+                        kunci_state = f"status_cek_{row['ID Order']}"
+                        kunci_btn = f"tombol_cek_{row['ID Order']}"
+                        
+                        if st.button("🔍 Cek Ketersediaan Bahan Baku", key=kunci_btn):
+                            st.session_state[kunci_state] = True
                             
                         # Logika Setelah Tombol Cek Ditekan
-                        if st.session_state.get(kunci_cek, False):
+                        if st.session_state.get(kunci_state, False):
                             st.markdown("**Status Material di Gudang:**")
                             c1, c2, c3 = st.columns(3)
                             
@@ -125,6 +128,8 @@ def jalankan(df_pem, df_prod, df_bahan, df_jadi, conn):
                                     df_pem.loc[df_pem['ID Order'] == row['ID Order'], 'Status Validasi'] = 'Sedang Diproduksi'
                                     conn.update(worksheet="Pemasaran", data=df_pem)
                                     
+                                    # Reset state supaya aman
+                                    st.session_state[kunci_state] = False
                                     st.cache_data.clear(); st.rerun()
                             else:
                                 st.error("🚨 BAHAN BAKU KURANG! Silakan lapor dan Restock di Modul Gudang sebelum bisa memotong.")
@@ -141,7 +146,7 @@ def jalankan(df_pem, df_prod, df_bahan, df_jadi, conn):
             for index, row in df_potong.iterrows():
                 with st.container(border=True):
                     c1, c2 = st.columns([3, 1])
-                    c1.markdown(f"**{row['ID Produksi']}** | Model: {row['Model Topi']} ({row['Jumlah (Pcs)']} Pcs)")
+                    c1.markdown(f"⚙️ **{row['ID Produksi']}** | Model: {row['Model Topi']} ({row['Jumlah (Pcs)']} Pcs)")
                     if c2.button("🪡 Selesai Jahit ➡️", key=f"jahit_{row['ID Produksi']}", use_container_width=True):
                         df_prod.loc[df_prod['ID Produksi'] == row['ID Produksi'], 'Status Produksi'] = 'Tahap 2: Jahit'
                         conn.update(worksheet="Produksi", data=df_prod)
@@ -159,7 +164,7 @@ def jalankan(df_pem, df_prod, df_bahan, df_jadi, conn):
             for index, row in df_jahit.iterrows():
                 with st.container(border=True):
                     c1, c2 = st.columns([3, 1])
-                    c1.markdown(f"**{row['ID Produksi']}** | Model: {row['Model Topi']} ({row['Jumlah (Pcs)']} Pcs)")
+                    c1.markdown(f"⚙️ **{row['ID Produksi']}** | Model: {row['Model Topi']} ({row['Jumlah (Pcs)']} Pcs)")
                     if c2.button("🖌️ Selesai Bordir ➡️", key=f"bordir_{row['ID Produksi']}", use_container_width=True):
                         df_prod.loc[df_prod['ID Produksi'] == row['ID Produksi'], 'Status Produksi'] = 'Tahap 3: Bordir & Sablon'
                         conn.update(worksheet="Produksi", data=df_prod)
@@ -177,7 +182,7 @@ def jalankan(df_pem, df_prod, df_bahan, df_jadi, conn):
             for index, row in df_bordir.iterrows():
                 with st.container(border=True):
                     c1, c2 = st.columns([2.5, 1.5])
-                    c1.markdown(f"**{row['ID Produksi']}** | Model: {row['Model Topi']} ({row['Jumlah (Pcs)']} Pcs)")
+                    c1.markdown(f"⚙️ **{row['ID Produksi']}** | Model: {row['Model Topi']} ({row['Jumlah (Pcs)']} Pcs)")
                     if c2.button("✅ Lulus QC & Masuk Gudang", key=f"qc_{row['ID Produksi']}", use_container_width=True):
                         try:
                             jml = int(row['Jumlah (Pcs)'])
@@ -194,7 +199,6 @@ def jalankan(df_pem, df_prod, df_bahan, df_jadi, conn):
                             conn.update(worksheet="Barang_Jadi", data=df_jadi)
                             
                             # 2. Update Status Selesai
-                            df_prod.loc[df_prod['ID Produksi'] == row['ID Produksi'], 'Status Produksi'] = 'Tahap 4: Aksesoris & QC' # Biar nyangkut sbg history
                             df_prod.loc[df_prod['ID Produksi'] == row['ID Produksi'], 'Status Produksi'] = 'Selesai & Masuk Gudang'
                             conn.update(worksheet="Produksi", data=df_prod)
                             
