@@ -4,7 +4,6 @@ from datetime import datetime
 import os
 
 def jalankan(df_pem, conn):
-    st.markdown("## 🤝 Modul Pemasaran & Order")
     st.write("Kelola pesanan klien dan *upload* desain dengan mudah.")
     st.divider()
 
