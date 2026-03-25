@@ -100,13 +100,22 @@ def main_app():
         
         import modul_produksi
         modul_produksi.jalankan(df_pem, df_prod, df_bahan, df_jadi, conn)
-        
-    # ==========================================
-    # MODUL SEMENTARA (Under Construction)
-    # ==========================================
 
+   # ==========================================
+    # MODUL 4: GUDANG (INVENTORY)
+    # ==========================================
     elif menu == "📦 Gudang (Inventory)":
-        st.warning("🚧 Modul Gudang sedang dirombak untuk memisahkan Bahan Baku dan Barang Jadi!")
+        st.header("📦 Modul Inventory & Kapasitas")
+        
+        # Ambil data gudang
+        kolom_bahan = ["Nama Bahan", "Stok", "Satuan", "Max Kapasitas"]
+        df_bahan = get_data("Bahan_Baku", [0,1,2,3], kolom_bahan)
+        
+        kolom_jadi = ["Model Topi", "Stok", "Satuan", "Max Kapasitas"]
+        df_jadi = get_data("Barang_Jadi", [0,1,2,3], kolom_jadi)
+        
+        import modul_gudang
+        modul_gudang.jalankan(df_bahan, df_jadi)
 
 # --- 4. SAKLAR UTAMA ---
 if not st.session_state.logged_in:
