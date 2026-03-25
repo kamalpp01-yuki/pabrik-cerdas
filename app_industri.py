@@ -80,10 +80,31 @@ def main_app():
         modul_keuangan.jalankan(df_uang, df_pemasaran, conn)
 
     # ==========================================
-    # MODUL SEMENTARA (Under Construction)
+    # MODUL 3: PRODUKSI (PPIC & QC)
     # ==========================================
     elif menu == "🏭 Produksi (PPIC & QC)":
-        st.warning("🚧 Modul Produksi sedang dirombak untuk menampilkan Desain!")
+        st.header("🏭 Modul Produksi & Quality Control")
+        
+        # Insinyur sejati memanggil 4 tabel sekaligus!
+        kolom_pem = ["ID Order", "Tanggal", "Nama Klien", "Model Topi", "Jumlah (Pcs)", "Total Harga", "File Desain", "Status Validasi"]
+        df_pem = get_data("Pemasaran", [0,1,2,3,4,5,6,7], kolom_pem)
+        
+        kolom_prod = ["ID Produksi", "ID Order", "Model Topi", "Jumlah (Pcs)", "Status Produksi"]
+        df_prod = get_data("Produksi", [0,1,2,3,4], kolom_prod)
+        
+        kolom_bahan = ["Nama Bahan", "Stok", "Satuan", "Max Kapasitas"]
+        df_bahan = get_data("Bahan_Baku", [0,1,2,3], kolom_bahan)
+        
+        kolom_jadi = ["Model Topi", "Stok", "Satuan", "Max Kapasitas"]
+        df_jadi = get_data("Barang_Jadi", [0,1,2,3], kolom_jadi)
+        
+        import modul_produksi
+        modul_produksi.jalankan(df_pem, df_prod, df_bahan, df_jadi, conn)
+        
+    # ==========================================
+    # MODUL SEMENTARA (Under Construction)
+    # ==========================================
+
     elif menu == "📦 Gudang (Inventory)":
         st.warning("🚧 Modul Gudang sedang dirombak untuk memisahkan Bahan Baku dan Barang Jadi!")
 
