@@ -34,26 +34,68 @@ def jalankan(df_pem, df_prod, df_bahan, df_jadi, conn):
     ])
 
     # ==========================================
-    # TAB TRACKING (SEMUA DATA)
+    # TAB TRACKING (SEMUA DATA JADI CARD & PROGRESS BAR)
     # ==========================================
     with tab_track:
         st.markdown("### 📡 Radar Pelacakan Pesanan (Live Tracking)")
-        # Gabungkan data Pemasaran (yang siap produksi) dan Produksi
+        
+        # 1. Siapkan Data Antrean
         df_siap = df_pem[df_pem['Status Validasi'] == 'Siap Produksi'].copy()
-        df_siap['Status Saat Ini'] = "Antrean (Belum Dipotong)"
+        if not df_siap.empty:
+            df_siap['Status Saat Ini'] = "Antrean (Belum Dipotong)"
+            df_siap['ID Produksi'] = "-" # Antrean belum punya kode produksi
         
+        # 2. Siapkan Data WIP (Sedang Berjalan)
         df_wip = df_prod[df_prod['Status Produksi'] != 'Selesai & Masuk Gudang'].copy()
-        df_wip['Status Saat Ini'] = df_wip['Status Produksi']
-        
-        # Tampilkan tabel elegan
-        st.write("**Menunggu Proses:**")
-        st.dataframe(df_siap[['ID Order', 'Tanggal', 'Nama Klien', 'Model Topi', 'Jumlah (Pcs)', 'Status Saat Ini']], use_container_width=True)
-        
-        st.write("**Sedang Berjalan di Pabrik:**")
         if not df_wip.empty:
-            st.dataframe(df_wip[['ID Produksi', 'ID Order', 'Model Topi', 'Jumlah (Pcs)', 'Status Saat Ini']], use_container_width=True)
+            df_wip['Status Saat Ini'] = df_wip['Status Produksi']
+            # Ambil nama klien dari df_pem berdasarkan ID Order biar infonya lengkap
+            mapping_klien = dict(zip(df_pem['ID Order'], df_pem['Nama Klien']))
+            df_wip['Nama Klien'] = df_wip['ID Order'].map(mapping_klien)
+        
+        # 3. Gabungkan Data untuk Ditampilkan
+        frames = []
+        if not df_siap.empty: frames.append(df_siap[['ID Order', 'ID Produksi', 'Nama Klien', 'Model Topi', 'Jumlah (Pcs)', 'Status Saat Ini']])
+        if not df_wip.empty: frames.append(df_wip[['ID Order', 'ID Produksi', 'Nama Klien', 'Model Topi', 'Jumlah (Pcs)', 'Status Saat Ini']])
+        
+        if len(frames) == 0:
+            st.info("🏝️ Belum ada pesanan yang masuk ke lantai produksi.")
         else:
-            st.info("Tidak ada order yang sedang dikerjakan di lantai pabrik.")
+            df_gabungan = pd.concat(frames, ignore_index=True)
+            
+            # Tampilkan dalam bentuk KARTU (CARD) dengan kolom
+            for index, row in df_gabungan.iterrows():
+                with st.container(border=True):
+                    c1, c2, c3 = st.columns([1.5, 2, 1.5])
+                    
+                    with c1:
+                        st.markdown(f"**{row['ID Order']}**")
+                        st.caption(f"🏢 Klien: **{row['Nama Klien']}**")
+                        
+                    with c2:
+                        st.write(f"🧢 **{row['Model Topi']}** ({row['Jumlah (Pcs)']} Pcs)")
+                        if row['ID Produksi'] != "-":
+                            st.caption(f"⚙️ Kode Produksi: {row['ID Produksi']}")
+                            
+                    with c3:
+                        status = row['Status Saat Ini']
+                        
+                        # Logika Visualisasi Warna & Progress Bar!
+                        if "Antrean" in status:
+                            st.info(f"⏳ {status}")
+                            st.progress(5, text="Persiapan Bahan")
+                        elif "1" in status:
+                            st.error(f"✂️ {status}")
+                            st.progress(25, text="Tahap 25% - Pemotongan")
+                        elif "2" in status:
+                            st.warning(f"🧵 {status}")
+                            st.progress(50, text="Tahap 50% - Penjahitan")
+                        elif "3" in status:
+                            st.success(f"🎨 {status}")
+                            st.progress(75, text="Tahap 75% - Bordir & Sablon")
+                        else:
+                            st.success(f"🧢 {status}")
+                            st.progress(95, text="Tahap Akhir - QC & Aksesoris")
 
     # ==========================================
     # TAB 1: CEK BAHAN & PEMOTONGAN
