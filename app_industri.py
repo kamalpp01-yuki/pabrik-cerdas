@@ -2,17 +2,17 @@ import streamlit as st
 import pandas as pd
 from streamlit_gsheets import GSheetsConnection
 from datetime import datetime
-import modul_gudang # Pastikan file ini ada di folder yang sama
+import modul_gudang
 import modul_keuangan
 
 # --- 1. PENGATURAN HALAMAN & LOGIN ---
-st.set_page_config(page_title="ERP Konveksi Sepatu", layout="wide")
+st.set_page_config(page_title="ERP Konveksi Topi", layout="wide")
 
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
 def login_screen():
-    st.title("👟 ERP Konveksi Sepatu")
+    st.title("🧢 ERP Konveksi Topi")
     st.write("Sistem Perencanaan Sumber Daya Perusahaan (Enterprise Resource Planning)")
     
     with st.form("login_form"):
@@ -28,8 +28,7 @@ def login_screen():
             else:
                 st.error("Username atau Password Salah!")
 
-# --- 2. FUNGSI BACA DATABASE (SUDAH DIPERBAIKI) ---
-# Sekarang kita HANYA me-return 'df' saja, 'conn' tidak ikut di-cache
+# --- 2. FUNGSI BACA DATABASE ---
 @st.cache_data(ttl=5) 
 def get_data(tab_name, cols, col_names):
     conn = st.connection("gsheets", type=GSheetsConnection)
@@ -43,17 +42,15 @@ def get_data(tab_name, cols, col_names):
 
 # --- 3. MODUL ERP UTAMA ---
 def main_app():
-    # MENU NAVIGASI DI SIDEBAR
     st.sidebar.title("🧭 Navigasi ERP")
     menu = st.sidebar.radio("Pilih Modul:", ["🏭 Produksi (PPIC)", "📦 Gudang (Inventory)", "💰 Keuangan (Finance)"])
     st.sidebar.divider()
     st.sidebar.button("🚪 Logout", on_click=lambda: st.session_state.update(logged_in=False))
 
-    # Panggil koneksi di luar cache untuk keperluan Update/Simpan data
     conn = st.connection("gsheets", type=GSheetsConnection)
 
-# ==========================================
-    # MODUL 1: PRODUKSI (TERINTEGRASI FULL ERP)
+    # ==========================================
+    # MODUL 1: PRODUKSI (TERINTEGRASI FULL)
     # ==========================================
     if menu == "🏭 Produksi (PPIC)":
         st.header("🏭 Modul Manajemen Produksi")
@@ -66,22 +63,19 @@ def main_app():
             with st.form("form_prod", clear_on_submit=True):
                 model = st.selectbox("Model Topi", ["Topi Baseball", "Topi Rimba", "Topi Trucker"])
                 jumlah = st.number_input("Jumlah (Pcs)", min_value=1, value=50)
-                
-                # Kita asumsikan harga jual per pcs untuk lapor ke Keuangan
                 harga_jual = st.number_input("Harga Jual per Pcs (Rp)", min_value=10000, value=35000, step=5000)
                 
                 submit_produksi = st.form_submit_button("🚀 Produksi & Integrasikan!")
                 
                 if submit_produksi:
-                    # 1. RUMUS KEBUTUHAN BAHAN (BOM)
                     if model == "Topi Baseball":
                         k_kain, k_benang, k_waktu = (0.15 * jumlah, 0.05 * jumlah, 0.5 * jumlah)
                     elif model == "Topi Rimba":
                         k_kain, k_benang, k_waktu = (0.25 * jumlah, 0.08 * jumlah, 0.8 * jumlah)
-                    else: # Topi Trucker
+                    else: 
                         k_kain, k_benang, k_waktu = (0.10 * jumlah, 0.04 * jumlah, 0.4 * jumlah)
                     
-                    # --- INTEGRASI A: CATAT KE TAB PRODUKSI ---
+                    # A: CATAT PRODUKSI
                     data_baru = pd.DataFrame([{
                         "Model Topi": model, "Jumlah (Pcs)": jumlah, 
                         "Kain (m2)": k_kain, "Benang (Roll)": k_benang,
@@ -90,16 +84,14 @@ def main_app():
                     df_update = pd.concat([df_prod, data_baru], ignore_index=True)
                     conn.update(worksheet="Produksi", data=df_update)
 
-                    # --- INTEGRASI B: POTONG STOK DI TAB GUDANG ---
+                    # B: POTONG GUDANG
                     df_gudang = get_data("Gudang", [0,1,2], ["Nama Barang", "Stok Tersedia", "Satuan"])
                     df_gudang['Stok Tersedia'] = pd.to_numeric(df_gudang['Stok Tersedia'], errors='coerce').fillna(0)
-                    
-                    # Kurangi stok sesuai hitungan BOM
                     df_gudang.loc[df_gudang['Nama Barang'] == "Kain Kanvas (Bahan Utama)", 'Stok Tersedia'] -= k_kain
                     df_gudang.loc[df_gudang['Nama Barang'] == "Benang Jahit", 'Stok Tersedia'] -= k_benang
                     conn.update(worksheet="Gudang", data=df_gudang)
 
-                    # --- INTEGRASI C: TAMBAH UANG DI TAB KEUANGAN ---
+                    # C: TAMBAH UANG KE KEUANGAN
                     df_uang = get_data("Keuangan", [0,1,2,3], ["Tanggal", "Keterangan", "Pemasukan (Rp)", "Pengeluaran (Rp)"])
                     pendapatan_total = harga_jual * jumlah
                     data_uang_baru = pd.DataFrame([{
@@ -111,7 +103,6 @@ def main_app():
                     df_uang_update = pd.concat([df_uang, data_uang_baru], ignore_index=True)
                     conn.update(worksheet="Keuangan", data=df_uang_update)
                     
-                    # Bersihkan memori dan Refresh!
                     st.cache_data.clear()
                     st.success(f"✅ Sistem Terintegrasi! Produksi dicatat, Stok dipotong, Uang Rp {pendapatan_total:,.0f} masuk kas!")
                     st.rerun()
@@ -121,25 +112,21 @@ def main_app():
             st.dataframe(df_prod, use_container_width=True)
 
     # ==========================================
-    # MODUL 2: GUDANG (MEMANGGIL FILE modul_gudang.py)
+    # MODUL 2: GUDANG 
     # ==========================================
     elif menu == "📦 Gudang (Inventory)":
         st.header("📦 Modul Stok Gudang")
         kolom_gudang = ["Nama Barang", "Stok Tersedia", "Satuan"]
         df_gudang = get_data("Gudang", [0,1,2], kolom_gudang)
-        
-        # Lempar dataframe dan koneksi ke file modul_gudang.py
         modul_gudang.jalankan(df_gudang, conn)
 
-# ==========================================
+    # ==========================================
     # MODUL 3: KEUANGAN
     # ==========================================
     elif menu == "💰 Keuangan (Finance)":
         st.header("💰 Modul Arus Kas (Cashflow)")
         kolom_keuangan = ["Tanggal", "Keterangan", "Pemasukan (Rp)", "Pengeluaran (Rp)"]
         df_uang = get_data("Keuangan", [0,1,2,3], kolom_keuangan)
-        
-        # LEMPAR TUGASNYA KE FILE KEUANGAN!
         modul_keuangan.jalankan(df_uang, conn)
 
 # --- 4. SAKLAR UTAMA ---
