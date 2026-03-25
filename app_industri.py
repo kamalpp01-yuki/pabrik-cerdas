@@ -63,10 +63,25 @@ def main_app():
         modul_pemasaran.jalankan(df_pemasaran, conn)
 
     # ==========================================
-    # MODUL SEMENTARA (Under Construction)
+    # MODUL 2: KEUANGAN (VALIDATOR)
     # ==========================================
     elif menu == "💰 Keuangan (Validator)":
-        st.warning("🚧 Modul Keuangan sedang dirombak untuk fitur Validasi Lunas!")
+        st.header("💰 Modul Keuangan & Validasi")
+        
+        # Ambil data dari 2 Tab berbeda (Keuangan & Pemasaran)
+        kolom_uang = ["Tanggal", "Keterangan", "Pemasukan (Rp)", "Pengeluaran (Rp)"]
+        df_uang = get_data("Keuangan", [0,1,2,3], kolom_uang)
+        
+        kolom_pem = ["ID Order", "Tanggal", "Nama Klien", "Model Topi", "Jumlah (Pcs)", "Total Harga", "File Desain", "Status Validasi"]
+        df_pemasaran = get_data("Pemasaran", [0,1,2,3,4,5,6,7], kolom_pem)
+        
+        # Lempar 2 data itu ke modul keuangan
+        import modul_keuangan
+        modul_keuangan.jalankan(df_uang, df_pemasaran, conn)
+
+    # ==========================================
+    # MODUL SEMENTARA (Under Construction)
+    # ==========================================
     elif menu == "🏭 Produksi (PPIC & QC)":
         st.warning("🚧 Modul Produksi sedang dirombak untuk menampilkan Desain!")
     elif menu == "📦 Gudang (Inventory)":
