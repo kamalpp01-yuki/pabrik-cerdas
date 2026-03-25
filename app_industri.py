@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from streamlit_gsheets import GSheetsConnection
 from datetime import datetime
-import modul_gudang
+import modul_gudang # Pastikan file ini ada di folder yang sama
 
 # --- 1. PENGATURAN HALAMAN & LOGIN ---
 st.set_page_config(page_title="ERP Konveksi Sepatu", layout="wide")
@@ -27,17 +27,18 @@ def login_screen():
             else:
                 st.error("Username atau Password Salah!")
 
-# --- 2. FUNGSI BACA DATABASE (Pencegah Error) ---
-@st.cache_data(ttl=5) # Refresh data setiap 5 detik
+# --- 2. FUNGSI BACA DATABASE (SUDAH DIPERBAIKI) ---
+# Sekarang kita HANYA me-return 'df' saja, 'conn' tidak ikut di-cache
+@st.cache_data(ttl=5) 
 def get_data(tab_name, cols, col_names):
     conn = st.connection("gsheets", type=GSheetsConnection)
     try:
         df = conn.read(worksheet=tab_name, usecols=cols)
         df = df.dropna(how="all")
         df.columns = col_names
-        return df, conn
+        return df
     except Exception as e:
-        return pd.DataFrame(columns=col_names), conn
+        return pd.DataFrame(columns=col_names)
 
 # --- 3. MODUL ERP UTAMA ---
 def main_app():
@@ -47,13 +48,18 @@ def main_app():
     st.sidebar.divider()
     st.sidebar.button("🚪 Logout", on_click=lambda: st.session_state.update(logged_in=False))
 
+    # Panggil koneksi di luar cache untuk keperluan Update/Simpan data
+    conn = st.connection("gsheets", type=GSheetsConnection)
+
     # ==========================================
     # MODUL 1: PRODUKSI
     # ==========================================
     if menu == "🏭 Produksi (PPIC)":
         st.header("🏭 Modul Manajemen Produksi")
         kolom_prod = ["Model Sepatu", "Jumlah (Pasang)", "Bahan Kulit (m2)", "Sol Sepatu (Pasang)", "Waktu (Jam)", "Waktu Input"]
-        df_prod, conn = get_data("Produksi", [0,1,2,3,4,5], kolom_prod)
+        
+        # Ambil datanya saja (tanpa conn)
+        df_prod = get_data("Produksi", [0,1,2,3,4,5], kolom_prod)
         
         col1, col2 = st.columns([1, 2])
         with col1:
@@ -73,6 +79,8 @@ def main_app():
                     }])
                     df_update = pd.concat([df_prod, data_baru], ignore_index=True)
                     conn.update(worksheet="Produksi", data=df_update)
+                    
+                    st.cache_data.clear() # Bersihkan memori biar data baru langsung muncul
                     st.success("Pesanan dicatat!")
                     st.rerun()
                     
@@ -81,14 +89,14 @@ def main_app():
             st.dataframe(df_prod, use_container_width=True)
 
     # ==========================================
-    # MODUL 2: GUDANG
+    # MODUL 2: GUDANG (MEMANGGIL FILE modul_gudang.py)
     # ==========================================
     elif menu == "📦 Gudang (Inventory)":
         st.header("📦 Modul Stok Gudang")
         kolom_gudang = ["Nama Barang", "Stok Tersedia", "Satuan"]
-        df_gudang, conn = get_data("Gudang", [0,1,2], kolom_gudang)
+        df_gudang = get_data("Gudang", [0,1,2], kolom_gudang)
         
-        # LEMPAR TUGASNYA KE FILE SEBELAH!
+        # Lempar dataframe dan koneksi ke file modul_gudang.py
         modul_gudang.jalankan(df_gudang, conn)
 
     # ==========================================
@@ -97,7 +105,7 @@ def main_app():
     elif menu == "💰 Keuangan (Finance)":
         st.header("💰 Modul Arus Kas (Cashflow)")
         kolom_keuangan = ["Tanggal", "Keterangan", "Pemasukan (Rp)", "Pengeluaran (Rp)"]
-        df_uang, conn = get_data("Keuangan", [0,1,2,3], kolom_keuangan)
+        df_uang = get_data("Keuangan", [0,1,2,3], kolom_keuangan)
         
         st.dataframe(df_uang, use_container_width=True)
         st.info("💡 Fitur input nota dan hitung profit akan kita bangun di tahap selanjutnya!")
