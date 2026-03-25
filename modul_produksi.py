@@ -191,76 +191,131 @@ def jalankan(df_pem, df_prod, df_bahan, df_jadi, conn):
                             else:
                                 st.error("🚨 BAHAN BAKU KURANG! Silakan lapor dan Restock di Modul Gudang sebelum bisa memotong.")
 
-    # ==========================================
-    # TAB 2: JAHIT
+# ==========================================
+    # TAB 2: JAHIT (CARD VIEW)
     # ==========================================
     with tab_2:
         st.markdown("### 🧵 Proses Menjahit")
-        df_potong = df_prod[df_prod['Status Produksi'] == 'Tahap 1: Pemotongan']
+        df_potong = df_prod[df_prod['Status Produksi'] == 'Tahap 1: Pemotongan'].copy()
         
-        if df_potong.empty: st.info("Tidak ada topi di tahap jahit.")
+        if df_potong.empty: 
+            st.info("Tidak ada topi di tahap jahit.")
         else:
+            df_potong['Nama Klien'] = df_potong['ID Order'].map(mapping_klien)
+            df_potong['File Desain'] = df_potong['ID Order'].map(mapping_gambar)
+            
             for index, row in df_potong.iterrows():
                 with st.container(border=True):
-                    c1, c2 = st.columns([3, 1])
-                    c1.markdown(f"⚙️ **{row['ID Produksi']}** | Model: {row['Model Topi']} ({row['Jumlah (Pcs)']} Pcs)")
-                    if c2.button("🪡 Selesai Jahit ➡️", key=f"jahit_{row['ID Produksi']}", use_container_width=True):
-                        df_prod.loc[df_prod['ID Produksi'] == row['ID Produksi'], 'Status Produksi'] = 'Tahap 2: Jahit'
-                        conn.update(worksheet="Produksi", data=df_prod)
-                        st.cache_data.clear(); st.rerun()
+                    col_img, col_desc, col_btn = st.columns([1, 2.5, 1])
+                    
+                    with col_img:
+                        path_gambar = os.path.join("desain_topi", str(row['File Desain']))
+                        if os.path.exists(path_gambar):
+                            st.image(path_gambar, use_container_width=True)
+                        else:
+                            st.info("🖼️ No Image")
+                            
+                    with col_desc:
+                        st.markdown(f"#### {row['ID Order']} - {row['Nama Klien']}")
+                        st.write(f"⚙️ **{row['ID Produksi']}** | 🧢 {row['Model Topi']} ({row['Jumlah (Pcs)']} Pcs)")
+                        st.caption("Status: ⏳ Siap Dijahit")
+                        
+                    with col_btn:
+                        st.markdown("<br>", unsafe_allow_html=True) # Biar tombol agak ke tengah
+                        if st.button("🪡 Selesai Jahit ➡️", key=f"jahit_{row['ID Produksi']}", use_container_width=True):
+                            df_prod.loc[df_prod['ID Produksi'] == row['ID Produksi'], 'Status Produksi'] = 'Tahap 2: Jahit'
+                            conn.update(worksheet="Produksi", data=df_prod)
+                            st.cache_data.clear(); st.rerun()
 
     # ==========================================
-    # TAB 3: BORDIR & SABLON
+    # TAB 3: BORDIR & SABLON (CARD VIEW)
     # ==========================================
     with tab_3:
         st.markdown("### 🎨 Proses Bordir & Sablon Logo")
-        df_jahit = df_prod[df_prod['Status Produksi'] == 'Tahap 2: Jahit']
+        df_jahit = df_prod[df_prod['Status Produksi'] == 'Tahap 2: Jahit'].copy()
         
-        if df_jahit.empty: st.info("Tidak ada topi di tahap bordir.")
+        if df_jahit.empty: 
+            st.info("Tidak ada topi di tahap bordir.")
         else:
+            df_jahit['Nama Klien'] = df_jahit['ID Order'].map(mapping_klien)
+            df_jahit['File Desain'] = df_jahit['ID Order'].map(mapping_gambar)
+            
             for index, row in df_jahit.iterrows():
                 with st.container(border=True):
-                    c1, c2 = st.columns([3, 1])
-                    c1.markdown(f"⚙️ **{row['ID Produksi']}** | Model: {row['Model Topi']} ({row['Jumlah (Pcs)']} Pcs)")
-                    if c2.button("🖌️ Selesai Bordir ➡️", key=f"bordir_{row['ID Produksi']}", use_container_width=True):
-                        df_prod.loc[df_prod['ID Produksi'] == row['ID Produksi'], 'Status Produksi'] = 'Tahap 3: Bordir & Sablon'
-                        conn.update(worksheet="Produksi", data=df_prod)
-                        st.cache_data.clear(); st.rerun()
+                    col_img, col_desc, col_btn = st.columns([1, 2.5, 1])
+                    
+                    with col_img:
+                        path_gambar = os.path.join("desain_topi", str(row['File Desain']))
+                        if os.path.exists(path_gambar):
+                            st.image(path_gambar, use_container_width=True)
+                        else:
+                            st.info("🖼️ No Image")
+                            
+                    with col_desc:
+                        st.markdown(f"#### {row['ID Order']} - {row['Nama Klien']}")
+                        st.write(f"⚙️ **{row['ID Produksi']}** | 🧢 {row['Model Topi']} ({row['Jumlah (Pcs)']} Pcs)")
+                        st.caption("Status: ⏳ Siap Dibordir/Sablon")
+                        
+                    with col_btn:
+                        st.markdown("<br>", unsafe_allow_html=True)
+                        if st.button("🖌️ Selesai Bordir ➡️", key=f"bordir_{row['ID Produksi']}", use_container_width=True):
+                            df_prod.loc[df_prod['ID Produksi'] == row['ID Produksi'], 'Status Produksi'] = 'Tahap 3: Bordir & Sablon'
+                            conn.update(worksheet="Produksi", data=df_prod)
+                            st.cache_data.clear(); st.rerun()
 
     # ==========================================
-    # TAB 4: AKSESORIS & QC LULUS
+    # TAB 4: AKSESORIS & QC LULUS (CARD VIEW)
     # ==========================================
     with tab_4:
         st.markdown("### 🧢 Pemasangan Aksesoris & Quality Control Akhir")
-        df_bordir = df_prod[df_prod['Status Produksi'] == 'Tahap 3: Bordir & Sablon']
+        df_bordir = df_prod[df_prod['Status Produksi'] == 'Tahap 3: Bordir & Sablon'].copy()
         
-        if df_bordir.empty: st.info("Tidak ada barang yang siap dipasang aksesoris/QC.")
+        if df_bordir.empty: 
+            st.info("Tidak ada barang yang siap dipasang aksesoris/QC.")
         else:
+            df_bordir['Nama Klien'] = df_bordir['ID Order'].map(mapping_klien)
+            df_bordir['File Desain'] = df_bordir['ID Order'].map(mapping_gambar)
+            
             for index, row in df_bordir.iterrows():
                 with st.container(border=True):
-                    c1, c2 = st.columns([2.5, 1.5])
-                    c1.markdown(f"⚙️ **{row['ID Produksi']}** | Model: {row['Model Topi']} ({row['Jumlah (Pcs)']} Pcs)")
-                    if c2.button("✅ Lulus QC & Masuk Gudang", key=f"qc_{row['ID Produksi']}", use_container_width=True):
-                        try:
-                            jml = int(row['Jumlah (Pcs)'])
-                            model_topi = str(row['Model Topi'])
+                    col_img, col_desc, col_btn = st.columns([1, 2.5, 1])
+                    
+                    with col_img:
+                        path_gambar = os.path.join("desain_topi", str(row['File Desain']))
+                        if os.path.exists(path_gambar):
+                            st.image(path_gambar, use_container_width=True)
+                        else:
+                            st.info("🖼️ No Image")
                             
-                            # 1. Tambah ke Gudang Barang Jadi
-                            if 'Stok' not in df_jadi.columns: df_jadi['Stok'] = 0
-                            df_jadi['Stok'] = pd.to_numeric(df_jadi['Stok'], errors='coerce').fillna(0)
-                            
-                            if model_topi in df_jadi['Model Topi'].astype(str).values:
-                                df_jadi.loc[df_jadi['Model Topi'].astype(str) == model_topi, 'Stok'] += jml
-                            else:
-                                df_jadi = pd.concat([df_jadi, pd.DataFrame([{"Model Topi": model_topi, "Stok": jml, "Satuan": "Pcs", "Max Kapasitas": 500}])], ignore_index=True)
-                            conn.update(worksheet="Barang_Jadi", data=df_jadi)
-                            
-                            # 2. Update Status Selesai
-                            df_prod.loc[df_prod['ID Produksi'] == row['ID Produksi'], 'Status Produksi'] = 'Selesai & Masuk Gudang'
-                            conn.update(worksheet="Produksi", data=df_prod)
-                            
-                            df_pem.loc[df_pem['ID Order'] == row['ID Order'], 'Status Validasi'] = 'Selesai & Masuk Gudang'
-                            conn.update(worksheet="Pemasaran", data=df_pem)
-                            
-                            st.cache_data.clear(); st.rerun()
-                        except Exception as e: st.error(f"Error: {e}")
+                    with col_desc:
+                        st.markdown(f"#### {row['ID Order']} - {row['Nama Klien']}")
+                        st.write(f"⚙️ **{row['ID Produksi']}** | 🧢 {row['Model Topi']} ({row['Jumlah (Pcs)']} Pcs)")
+                        st.caption("Status: ⏳ Siap Masuk QC Akhir")
+                        
+                    with col_btn:
+                        st.markdown("<br>", unsafe_allow_html=True)
+                        if st.button("✅ Lulus QC & Gudang", key=f"qc_{row['ID Produksi']}", use_container_width=True):
+                            try:
+                                jml = int(row['Jumlah (Pcs)'])
+                                model_topi = str(row['Model Topi'])
+                                
+                                # 1. Tambah ke Gudang Barang Jadi
+                                if 'Stok' not in df_jadi.columns: df_jadi['Stok'] = 0
+                                df_jadi['Stok'] = pd.to_numeric(df_jadi['Stok'], errors='coerce').fillna(0)
+                                
+                                if model_topi in df_jadi['Model Topi'].astype(str).values:
+                                    df_jadi.loc[df_jadi['Model Topi'].astype(str) == model_topi, 'Stok'] += jml
+                                else:
+                                    data_jadi_baru = pd.DataFrame([{"Model Topi": model_topi, "Stok": jml, "Satuan": "Pcs", "Max Kapasitas": 500}])
+                                    df_jadi = pd.concat([df_jadi, data_jadi_baru], ignore_index=True)
+                                conn.update(worksheet="Barang_Jadi", data=df_jadi)
+                                
+                                # 2. Update Status Selesai
+                                df_prod.loc[df_prod['ID Produksi'] == row['ID Produksi'], 'Status Produksi'] = 'Selesai & Masuk Gudang'
+                                conn.update(worksheet="Produksi", data=df_prod)
+                                
+                                df_pem.loc[df_pem['ID Order'] == row['ID Order'], 'Status Validasi'] = 'Selesai & Masuk Gudang'
+                                conn.update(worksheet="Pemasaran", data=df_pem)
+                                
+                                st.cache_data.clear(); st.rerun()
+                            except Exception as e: st.error(f"Error: {e}")
