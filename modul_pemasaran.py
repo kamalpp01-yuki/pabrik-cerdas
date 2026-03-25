@@ -35,19 +35,21 @@ def jalankan(df_pem, conn):
                 if nama_klien == "" or harga <= 0:
                     st.error("⚠️ Nama Klien dan Harga harus diisi!")
                 else:
-                    id_order = f"ORD-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-                    nama_file_simpan = "Tidak Ada Desain"
-                    if file_desain:
-                        os.makedirs("desain_topi", exist_ok=True)
-                        nama_file_simpan = f"{id_order}_{file_desain.name}"
-                        with open(os.path.join("desain_topi", nama_file_simpan), "wb") as f:
-                            f.write(file_desain.getbuffer())
+                    # --- TAMBAHKAN SPINNER DI SINI ---
+                    with st.spinner("🚀 Sedang mengunggah desain dan menyimpan data pesanan..."):
+                        id_order = f"ORD-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+                        nama_file_simpan = "Tidak Ada Desain"
+                        if file_desain:
+                            os.makedirs("desain_topi", exist_ok=True)
+                            nama_file_simpan = f"{id_order}_{file_desain.name}"
+                            with open(os.path.join("desain_topi", nama_file_simpan), "wb") as f:
+                                f.write(file_desain.getbuffer())
 
-                    data_baru = pd.DataFrame([{"ID Order": id_order, "Tanggal": datetime.now().strftime("%Y-%m-%d"), "Nama Klien": nama_klien, "Model Topi": model_topi, "Jumlah (Pcs)": jumlah, "Total Harga": harga, "File Desain": nama_file_simpan, "Status Validasi": "Menunggu Pembayaran"}])
-                    conn.update(worksheet="Pemasaran", data=pd.concat([df_pem, data_baru], ignore_index=True))
-                    st.cache_data.clear()
-                    st.success("✅ Pesanan disimpan!")
-                    st.rerun()
+                        data_baru = pd.DataFrame([{"ID Order": id_order, "Tanggal": datetime.now().strftime("%Y-%m-%d"), "Nama Klien": nama_klien, "Model Topi": model_topi, "Jumlah (Pcs)": jumlah, "Total Harga": harga, "File Desain": nama_file_simpan, "Status Validasi": "Menunggu Pembayaran"}])
+                        conn.update(worksheet="Pemasaran", data=pd.concat([df_pem, data_baru], ignore_index=True))
+                        st.cache_data.clear()
+                        st.success("✅ Pesanan disimpan!")
+                        st.rerun()
 
     # TAB 2: DATABASE
     with tab2:
