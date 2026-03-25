@@ -1,0 +1,15 @@
+[theme]
+# Warna tombol utama, kalender, dan aksen garis
+primaryColor = "#00ADB5"
+
+# Warna background utama layar
+backgroundColor = "#121212"
+
+# Warna background sidebar (kiri) dan kotak input form
+secondaryBackgroundColor = "#1E1E24"
+
+# Warna teks utama (Putih agak abu biar mata nggak sakit)
+textColor = "#E0E0E0"
+
+# Jenis Font (Bisa ganti: "sans serif", "serif", atau "monospace")
+font = "sans serif"
