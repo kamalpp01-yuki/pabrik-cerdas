@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from streamlit_gsheets import GSheetsConnection
 from datetime import datetime
+import modul_gudang
 
 # --- 1. PENGATURAN HALAMAN & LOGIN ---
 st.set_page_config(page_title="ERP Konveksi Sepatu", layout="wide")
@@ -87,8 +88,8 @@ def main_app():
         kolom_gudang = ["Nama Barang", "Stok Tersedia", "Satuan"]
         df_gudang, conn = get_data("Gudang", [0,1,2], kolom_gudang)
         
-        st.dataframe(df_gudang, use_container_width=True)
-        st.info("💡 Fitur tambah/kurang stok otomatis akan kita bangun di tahap selanjutnya!")
+        # LEMPAR TUGASNYA KE FILE SEBELAH!
+        modul_gudang.jalankan(df_gudang, conn)
 
     # ==========================================
     # MODUL 3: KEUANGAN
