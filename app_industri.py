@@ -43,6 +43,7 @@ def main_app():
     st.sidebar.title("🧭 Navigasi ERP Topi")
     # MENU BARU YANG LEBIH RAPI
     menu = st.sidebar.radio("Pilih Modul:", [
+        "📊 Dashboard Executive"
         "🤝 Pemasaran (Sales)", 
         "💰 Keuangan (Validator)",
         "🏭 Produksi (PPIC & QC)", 
@@ -53,6 +54,50 @@ def main_app():
 
     conn = st.connection("gsheets", type=GSheetsConnection)
 
+    # ==========================================
+    # MODUL 0: DASHBOARD EXECUTIVE (LEVEL 2 UI)
+    # ==========================================
+    if menu == "📊 Dashboard Executive":
+        st.header("📊 Executive Dashboard")
+        st.markdown("Ringkasan performa pabrik topi secara *real-time*.")
+        
+        try:
+            # 1. Sedot semua data dari seluruh divisi
+            df_pem = conn.read(worksheet="Pemasaran").dropna(how="all")
+            df_uang = conn.read(worksheet="Keuangan").dropna(how="all")
+            df_prod = conn.read(worksheet="Produksi").dropna(how="all")
+            df_jadi = conn.read(worksheet="Barang_Jadi").dropna(how="all")
+            
+            # 2. Rumus Hitung-hitungan Cepat ala Manajer
+            total_order = len(df_pem)
+            
+            df_uang['Pemasukan (Rp)'] = pd.to_numeric(df_uang['Pemasukan (Rp)'], errors='coerce').fillna(0)
+            total_pendapatan = df_uang['Pemasukan (Rp)'].sum()
+            
+            df_wip = df_prod[df_prod['Status Produksi'] == 'Sedang Diproduksi']
+            sedang_dijahit = len(df_wip)
+            
+            df_jadi['Stok'] = pd.to_numeric(df_jadi['Stok'], errors='coerce').fillna(0)
+            total_gudang = df_jadi['Stok'].sum()
+            
+            # 3. TAMPILKAN PAPAN SKOR (METRICS)
+            st.markdown("### 📈 Skor Performa Hari Ini")
+            
+            # Bagi layar jadi 4 kolom sejajar
+            c1, c2, c3, c4 = st.columns(4)
+            
+            # Tampilkan kartu metrik yang keren
+            c1.metric(label="🛒 Total Pesanan Masuk", value=f"{total_order} Order")
+            c2.metric(label="💰 Total Pendapatan", value=f"Rp {total_pendapatan:,.0f}".replace(",", "."))
+            c3.metric(label="⚙️ Sedang Dijahit", value=f"{sedang_dijahit} Batch")
+            c4.metric(label="📦 Stok Barang Jadi", value=f"{total_gudang} Pcs")
+            
+            st.divider()
+            st.info("💡 Selamat datang di Sistem ERP Cerdas. Silakan navigasi ke modul lain di sebelah kiri untuk melihat detail operasional masing-masing divisi.")
+            
+        except Exception as e:
+            st.warning("Sedang memuat data atau data masih kosong. Silakan isi pesanan pertama Anda!")
+            
     # ==========================================
     # MODUL 1: PEMASARAN
     # ==========================================
