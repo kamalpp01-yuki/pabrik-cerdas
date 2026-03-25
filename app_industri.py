@@ -52,37 +52,68 @@ def main_app():
     # Panggil koneksi di luar cache untuk keperluan Update/Simpan data
     conn = st.connection("gsheets", type=GSheetsConnection)
 
-    # ==========================================
-    # MODUL 1: PRODUKSI
+# ==========================================
+    # MODUL 1: PRODUKSI (TERINTEGRASI FULL ERP)
     # ==========================================
     if menu == "🏭 Produksi (PPIC)":
         st.header("🏭 Modul Manajemen Produksi")
-        kolom_prod = ["Model Sepatu", "Jumlah (Pasang)", "Bahan Kulit (m2)", "Sol Sepatu (Pasang)", "Waktu (Jam)", "Waktu Input"]
-        
-        # Ambil datanya saja (tanpa conn)
+        kolom_prod = ["Model Topi", "Jumlah (Pcs)", "Kain (m2)", "Benang (Roll)", "Waktu (Jam)", "Waktu Input"]
         df_prod = get_data("Produksi", [0,1,2,3,4,5], kolom_prod)
         
         col1, col2 = st.columns([1, 2])
         with col1:
             st.subheader("Input Pesanan")
             with st.form("form_prod", clear_on_submit=True):
-                model = st.selectbox("Model Sepatu", ["Topi Baseball", "Topi klasik", "Topi casual"])
-                jumlah = st.number_input("Jumlah (Pasang)", min_value=1, value=20)
-                if st.form_submit_button("Catat Produksi"):
-                    # Rumus BOM (Bill of Materials)
-                    k_kulit = 0.5 * jumlah if model == "Sneakers Kasual" else (0.8 * jumlah if model == "Sepatu Pantofel" else 1.2 * jumlah)
-                    k_waktu = 1.5 * jumlah if model == "Sneakers Kasual" else (2.5 * jumlah if model == "Sepatu Pantofel" else 4.0 * jumlah)
+                model = st.selectbox("Model Topi", ["Topi Baseball", "Topi Rimba", "Topi Trucker"])
+                jumlah = st.number_input("Jumlah (Pcs)", min_value=1, value=50)
+                
+                # Kita asumsikan harga jual per pcs untuk lapor ke Keuangan
+                harga_jual = st.number_input("Harga Jual per Pcs (Rp)", min_value=10000, value=35000, step=5000)
+                
+                submit_produksi = st.form_submit_button("🚀 Produksi & Integrasikan!")
+                
+                if submit_produksi:
+                    # 1. RUMUS KEBUTUHAN BAHAN (BOM)
+                    if model == "Topi Baseball":
+                        k_kain, k_benang, k_waktu = (0.15 * jumlah, 0.05 * jumlah, 0.5 * jumlah)
+                    elif model == "Topi Rimba":
+                        k_kain, k_benang, k_waktu = (0.25 * jumlah, 0.08 * jumlah, 0.8 * jumlah)
+                    else: # Topi Trucker
+                        k_kain, k_benang, k_waktu = (0.10 * jumlah, 0.04 * jumlah, 0.4 * jumlah)
                     
+                    # --- INTEGRASI A: CATAT KE TAB PRODUKSI ---
                     data_baru = pd.DataFrame([{
-                        "Model Sepatu": model, "Jumlah (Pasang)": jumlah, 
-                        "Bahan Kulit (m2)": k_kulit, "Sol Sepatu (Pasang)": jumlah,
+                        "Model Topi": model, "Jumlah (Pcs)": jumlah, 
+                        "Kain (m2)": k_kain, "Benang (Roll)": k_benang,
                         "Waktu (Jam)": k_waktu, "Waktu Input": datetime.now().strftime("%Y-%m-%d %H:%M")
                     }])
                     df_update = pd.concat([df_prod, data_baru], ignore_index=True)
                     conn.update(worksheet="Produksi", data=df_update)
+
+                    # --- INTEGRASI B: POTONG STOK DI TAB GUDANG ---
+                    df_gudang = get_data("Gudang", [0,1,2], ["Nama Barang", "Stok Tersedia", "Satuan"])
+                    df_gudang['Stok Tersedia'] = pd.to_numeric(df_gudang['Stok Tersedia'], errors='coerce').fillna(0)
                     
-                    st.cache_data.clear() # Bersihkan memori biar data baru langsung muncul
-                    st.success("Pesanan dicatat!")
+                    # Kurangi stok sesuai hitungan BOM
+                    df_gudang.loc[df_gudang['Nama Barang'] == "Kain Kanvas (Bahan Utama)", 'Stok Tersedia'] -= k_kain
+                    df_gudang.loc[df_gudang['Nama Barang'] == "Benang Jahit", 'Stok Tersedia'] -= k_benang
+                    conn.update(worksheet="Gudang", data=df_gudang)
+
+                    # --- INTEGRASI C: TAMBAH UANG DI TAB KEUANGAN ---
+                    df_uang = get_data("Keuangan", [0,1,2,3], ["Tanggal", "Keterangan", "Pemasukan (Rp)", "Pengeluaran (Rp)"])
+                    pendapatan_total = harga_jual * jumlah
+                    data_uang_baru = pd.DataFrame([{
+                        "Tanggal": datetime.now().strftime("%Y-%m-%d"),
+                        "Keterangan": f"Penjualan {jumlah} Pcs {model}",
+                        "Pemasukan (Rp)": pendapatan_total,
+                        "Pengeluaran (Rp)": 0
+                    }])
+                    df_uang_update = pd.concat([df_uang, data_uang_baru], ignore_index=True)
+                    conn.update(worksheet="Keuangan", data=df_uang_update)
+                    
+                    # Bersihkan memori dan Refresh!
+                    st.cache_data.clear()
+                    st.success(f"✅ Sistem Terintegrasi! Produksi dicatat, Stok dipotong, Uang Rp {pendapatan_total:,.0f} masuk kas!")
                     st.rerun()
                     
         with col2:
