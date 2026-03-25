@@ -45,9 +45,9 @@ def jalankan(df_pem, df_prod, df_bahan, df_jadi, conn):
                         df_bahan['Stok'] = pd.to_numeric(df_bahan['Stok'], errors='coerce').fillna(0)
                         
                         # Kita pakai 'str.contains' biar cerdas cari nama bahan walaupun ngetiknya beda
-                        df_bahan.loc[df_bahan['Nama Bahan'].str.contains('Kain', case=False, na=False), 'Stok'] -= butuh_kain
-                        df_bahan.loc[df_bahan['Nama Bahan'].str.contains('Benang', case=False, na=False), 'Stok'] -= butuh_benang
-                        df_bahan.loc[df_bahan['Nama Bahan'].str.contains('Pengait', case=False, na=False), 'Stok'] -= butuh_pengait
+                        df_bahan.loc[df_bahan['Nama Bahan'].astype(str).str.contains('Kain', case=False, na=False), 'Stok'] -= butuh_kain
+                        df_bahan.loc[df_bahan['Nama Bahan'].astype(str).str.contains('Benang', case=False, na=False), 'Stok'] -= butuh_benang
+                        df_bahan.loc[df_bahan['Nama Bahan'].astype(str).str.contains('Pengait', case=False, na=False), 'Stok'] -= butuh_pengait
                         conn.update(worksheet="Bahan_Baku", data=df_bahan)
 
                         # B. PINDAHKAN KE TABEL PRODUKSI (Work In Progress)
