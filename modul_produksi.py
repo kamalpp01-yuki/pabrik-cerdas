@@ -83,10 +83,24 @@ def jalankan(df_pem, df_prod, df_bahan, df_jadi, conn):
                     
                     if st.button("✅ Lulus QC & Masukkan ke Gudang Barang Jadi", key=f"qc_{row['ID Produksi']}"):
                         
-                        # A. TAMBAH STOK KE GUDANG BARANG JADI
+                        # A. TAMBAH STOK KE GUDANG BARANG JADI (AUTO-CREATE)
                         jml = int(row['Jumlah (Pcs)'])
                         df_jadi['Stok'] = pd.to_numeric(df_jadi['Stok'], errors='coerce').fillna(0)
-                        df_jadi.loc[df_jadi['Model Topi'] == row['Model Topi'], 'Stok'] += jml
+                        
+                        # Cek apakah topinya sudah ada di Gudang?
+                        if row['Model Topi'] in df_jadi['Model Topi'].values:
+                            # Kalau sudah ada, tinggal tambahkan angkanya
+                            df_jadi.loc[df_jadi['Model Topi'] == row['Model Topi'], 'Stok'] += jml
+                        else:
+                            # Kalau belum ada, bikin baris baru otomatis!
+                            data_jadi_baru = pd.DataFrame([{
+                                "Model Topi": row['Model Topi'],
+                                "Stok": jml,
+                                "Satuan": "Pcs",
+                                "Max Kapasitas": 500
+                            }])
+                            df_jadi = pd.concat([df_jadi, data_jadi_baru], ignore_index=True)
+                            
                         conn.update(worksheet="Barang_Jadi", data=df_jadi)
 
                         # B. UPDATE STATUS PRODUKSI
