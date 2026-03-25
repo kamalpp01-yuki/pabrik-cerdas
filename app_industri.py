@@ -10,6 +10,41 @@ import modul_pemasaran
 # --- 1. PENGATURAN HALAMAN & LOGIN ---
 st.set_page_config(page_title="ERP Konveksi Topi", layout="wide")
 
+# --- SUNTIKAN CUSTOM CSS (LEVEL 4 UI) ---
+st.markdown("""
+<style>
+    /* 1. Efek Kartu (Card) untuk Papan Skor / Metric */
+    div[data-testid="stMetric"] {
+        background-color: #1E1E24; /* Warna gelap elegan */
+        border-left: 5px solid #00ADB5; /* Garis aksen biru elektrik */
+        padding: 15px 20px;
+        border-radius: 10px;
+        box-shadow: 2px 4px 10px rgba(0,0,0,0.4); /* Bayangan gelap */
+        transition: transform 0.3s ease, box-shadow 0.3s ease; /* Animasi mulus */
+    }
+    
+    /* 2. Efek Melayang (Hover) saat disorot mouse */
+    div[data-testid="stMetric"]:hover {
+        transform: translateY(-5px); /* Ngangkat ke atas sedikit */
+        box-shadow: 4px 8px 15px rgba(0, 173, 181, 0.3); /* Bayangan biru menyala */
+    }
+
+    /* 3. Efek Tombol (Button) yang lebih modern */
+    div[data-testid="stButton"] button {
+        border-radius: 8px;
+        font-weight: bold;
+        transition: all 0.2s ease-in-out;
+    }
+    div[data-testid="stButton"] button:hover {
+        transform: scale(1.03); /* Tombol membesar dikit pas disorot */
+    }
+    
+    /* 4. Ngilangin menu hamburger default Streamlit (Biar kaya web beneran) */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+</style>
+""", unsafe_allow_html=True)
+
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
