@@ -33,8 +33,8 @@ def jalankan(df_pem, df_prod, df_bahan, df_jadi, conn):
         "🧢 4. Aksesoris & QC"
     ])
 
-    # ==========================================
-    # TAB TRACKING (SEMUA DATA JADI CARD & PROGRESS BAR)
+# ==========================================
+    # TAB TRACKING (SEMUA DATA JADI CARD + PROGRESS BAR + GAMBAR)
     # ==========================================
     with tab_track:
         st.markdown("### 📡 Radar Pelacakan Pesanan (Live Tracking)")
@@ -49,25 +49,40 @@ def jalankan(df_pem, df_prod, df_bahan, df_jadi, conn):
         df_wip = df_prod[df_prod['Status Produksi'] != 'Selesai & Masuk Gudang'].copy()
         if not df_wip.empty:
             df_wip['Status Saat Ini'] = df_wip['Status Produksi']
-            # Ambil nama klien dari df_pem berdasarkan ID Order biar infonya lengkap
+            
+            # Tarik nama klien dan NAMA FILE GAMBAR dari df_pem berdasarkan ID Order
             mapping_klien = dict(zip(df_pem['ID Order'], df_pem['Nama Klien']))
+            mapping_gambar = dict(zip(df_pem['ID Order'], df_pem['File Desain']))
+            
             df_wip['Nama Klien'] = df_wip['ID Order'].map(mapping_klien)
+            df_wip['File Desain'] = df_wip['ID Order'].map(mapping_gambar) # <--- Ini kuncinya!
         
         # 3. Gabungkan Data untuk Ditampilkan
         frames = []
-        if not df_siap.empty: frames.append(df_siap[['ID Order', 'ID Produksi', 'Nama Klien', 'Model Topi', 'Jumlah (Pcs)', 'Status Saat Ini']])
-        if not df_wip.empty: frames.append(df_wip[['ID Order', 'ID Produksi', 'Nama Klien', 'Model Topi', 'Jumlah (Pcs)', 'Status Saat Ini']])
+        kolom_pilih = ['ID Order', 'ID Produksi', 'Nama Klien', 'Model Topi', 'Jumlah (Pcs)', 'Status Saat Ini', 'File Desain']
+        
+        if not df_siap.empty: frames.append(df_siap[kolom_pilih])
+        if not df_wip.empty: frames.append(df_wip[kolom_pilih])
         
         if len(frames) == 0:
             st.info("🏝️ Belum ada pesanan yang masuk ke lantai produksi.")
         else:
             df_gabungan = pd.concat(frames, ignore_index=True)
             
-            # Tampilkan dalam bentuk KARTU (CARD) dengan kolom
+            # Tampilkan dalam bentuk KARTU (CARD)
             for index, row in df_gabungan.iterrows():
                 with st.container(border=True):
-                    c1, c2, c3 = st.columns([1.5, 2, 1.5])
+                    # Kita bagi layarnya jadi 4 bagian (Paling kiri khusus gambar)
+                    col_img, c1, c2, c3 = st.columns([1, 1.5, 2, 1.5])
                     
+                    # TAMPILKAN GAMBAR DESAIN DI SINI
+                    with col_img:
+                        path_gambar = os.path.join("desain_topi", str(row['File Desain']))
+                        if os.path.exists(path_gambar):
+                            st.image(path_gambar, use_container_width=True)
+                        else:
+                            st.info("🖼️ No Image")
+                            
                     with c1:
                         st.markdown(f"**{row['ID Order']}**")
                         st.caption(f"🏢 Klien: **{row['Nama Klien']}**")
@@ -80,7 +95,7 @@ def jalankan(df_pem, df_prod, df_bahan, df_jadi, conn):
                     with c3:
                         status = row['Status Saat Ini']
                         
-                        # Logika Visualisasi Warna & Progress Bar!
+                        # Logika Visualisasi Warna & Progress Bar
                         if "Antrean" in status:
                             st.info(f"⏳ {status}")
                             st.progress(5, text="Persiapan Bahan")
