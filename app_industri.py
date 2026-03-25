@@ -101,21 +101,27 @@ def main_app():
         import modul_produksi
         modul_produksi.jalankan(df_pem, df_prod, df_bahan, df_jadi, conn)
 
-   # ==========================================
-    # MODUL 4: GUDANG (INVENTORY)
+    # ==========================================
+    # MODUL 4: GUDANG (INVENTORY) - VERSI ANTI-ERROR
     # ==========================================
     elif menu == "📦 Gudang (Inventory)":
-        st.header("📦 Modul Inventory & Kapasitas")
+        st.header("📦 Modul Gudang Terpadu")
         
-        # Ambil data gudang
-        kolom_bahan = ["Nama Bahan", "Stok", "Satuan", "Max Kapasitas"]
-        df_bahan = get_data("Bahan_Baku", [0,1,2,3], kolom_bahan)
-        
-        kolom_jadi = ["Model Topi", "Stok", "Satuan", "Max Kapasitas"]
-        df_jadi = get_data("Barang_Jadi", [0,1,2,3], kolom_jadi)
-        
-        import modul_gudang
-        modul_gudang.jalankan(df_bahan, df_jadi, conn)
+        try:
+            # Baca semua kolom di tab Bahan_Baku
+            df_bahan = conn.read(worksheet="Bahan_Baku")
+            df_bahan = df_bahan.dropna(how="all") # Hapus baris kosong
+            
+            # Baca semua kolom di tab Barang_Jadi
+            df_jadi = conn.read(worksheet="Barang_Jadi")
+            df_jadi = df_jadi.dropna(how="all") # Hapus baris kosong
+            
+            import modul_gudang
+            modul_gudang.jalankan(df_bahan, df_jadi, conn)
+            
+        except Exception as e:
+            st.error(f"🚨 Gagal terhubung ke Google Sheets: {e}")
+            st.info("Pastikan nama Tab di Google Sheets adalah 'Bahan_Baku' dan 'Barang_Jadi'")
 
 # --- 4. SAKLAR UTAMA ---
 if not st.session_state.logged_in:
