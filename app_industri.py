@@ -115,7 +115,7 @@ def main_app():
         df_jadi = get_data("Barang_Jadi", [0,1,2,3], kolom_jadi)
         
         import modul_gudang
-        modul_gudang.jalankan(df_bahan, df_jadi)
+        modul_gudang.jalankan(df_bahan, df_jadi, conn)
 
 # --- 4. SAKLAR UTAMA ---
 if not st.session_state.logged_in:
