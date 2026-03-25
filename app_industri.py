@@ -43,7 +43,7 @@ def main_app():
     st.sidebar.title("🧭 Navigasi ERP Topi")
     # MENU BARU YANG LEBIH RAPI
     menu = st.sidebar.radio("Pilih Modul:", [
-        "📊 Dashboard Executive"
+        "📊 Dashboard Executive",
         "🤝 Pemasaran (Sales)", 
         "💰 Keuangan (Validator)",
         "🏭 Produksi (PPIC & QC)", 
@@ -101,7 +101,7 @@ def main_app():
     # ==========================================
     # MODUL 1: PEMASARAN
     # ==========================================
-    if menu == "🤝 Pemasaran (Sales)":
+    elif menu == "🤝 Pemasaran (Sales)":
         st.header("🤝 Modul Pemasaran & Order")
         kolom_pemasaran = ["ID Order", "Tanggal", "Nama Klien", "Model Topi", "Jumlah (Pcs)", "Total Harga", "File Desain", "Status Validasi"]
         df_pemasaran = get_data("Pemasaran", [0,1,2,3,4,5,6,7], kolom_pemasaran)
