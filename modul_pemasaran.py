@@ -20,57 +20,62 @@ def jalankan(df_pem, df_produk, conn):
     # --- 3 TAB TERPISAH ---
     tab1, tab2, tab3 = st.tabs(["📝 Form Pesanan Baru", "📋 Database Pesanan Klien", "🗄️ Master Data Produk & BOM"])
 
-    # ==========================================
-    # TAB 1: FORM PESANAN (AUTO PRICING)
+# ==========================================
+    # TAB 1: FORM PESANAN (AUTO PRICING LIVE!)
     # ==========================================
     with tab1:
         if df_produk.empty:
             st.warning("⚠️ Katalog Produk masih kosong! Silakan tambah produk di Tab 'Master Data Produk' terlebih dahulu.")
         else:
-            with st.form("form_order_baru", clear_on_submit=True):
-                st.markdown("### ➕ Buat Pesanan Baru")
-                col_kiri, col_kanan = st.columns(2)
+            st.markdown("### ➕ Buat Pesanan Baru")
+            
+            # KITA HAPUS st.form DI SINI BIAR BISA LIVE UPDATE!
+            col_kiri, col_kanan = st.columns(2)
+            
+            with col_kiri:
+                nama_klien = st.text_input("Nama Klien / Instansi", placeholder="Misal: PT Maju Jaya")
+                # Dropdown otomatis narik dari Master Data
+                daftar_topi = df_produk["Model Topi"].tolist()
+                model_topi = st.selectbox("Pilih Model Topi", daftar_topi)
+                jumlah = st.number_input("Jumlah (Pcs)", min_value=1, value=50)
                 
-                with col_kiri:
-                    nama_klien = st.text_input("Nama Klien / Instansi", placeholder="Misal: PT Maju Jaya")
-                    # Dropdown otomatis narik dari Master Data
-                    daftar_topi = df_produk["Model Topi"].tolist()
-                    model_topi = st.selectbox("Pilih Model Topi", daftar_topi)
-                    jumlah = st.number_input("Jumlah (Pcs)", min_value=1, value=50)
-                    
-                with col_kanan:
-                    file_desain = st.file_uploader("Upload Desain Topi (JPG/PNG)", type=["jpg", "png"])
-                    
-                    # Logika Auto-Pricing
-                    harga_satuan = df_produk.loc[df_produk['Model Topi'] == model_topi, 'Harga Satuan (Rp)'].values[0]
-                    total_harga_otomatis = float(harga_satuan) * jumlah
-                    st.info(f"💡 **Info Harga:** Rp {float(harga_satuan):,.0f} / Pcs")
-                    st.success(f"💰 **TOTAL TAGIHAN: Rp {total_harga_otomatis:,.0f}**")
+            with col_kanan:
+                file_desain = st.file_uploader("Upload Desain Topi (JPG/PNG)", type=["jpg", "png"])
+                
+                # Logika Auto-Pricing (Sekarang langsung berubah saat diklik!)
+                harga_satuan = df_produk.loc[df_produk['Model Topi'] == model_topi, 'Harga Satuan (Rp)'].values[0]
+                total_harga_otomatis = float(harga_satuan) * jumlah
+                
+                st.info(f"💡 **Info Harga:** Rp {float(harga_satuan):,.0f} / Pcs")
+                st.success(f"💰 **TOTAL TAGIHAN: Rp {total_harga_otomatis:,.0f}**")
 
-                st.markdown("<br>", unsafe_allow_html=True)
-                if st.form_submit_button("💾 Simpan & Teruskan ke Keuangan", use_container_width=True):
-                    if nama_klien == "":
-                        st.error("⚠️ Nama Klien harus diisi!")
-                    else:
-                        with st.spinner("🚀 Sedang menyimpan pesanan..."):
-                            id_order = f"ORD-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-                            nama_file_simpan = "Tidak Ada Desain"
-                            
-                            if file_desain:
-                                os.makedirs("desain_topi", exist_ok=True)
-                                nama_file_simpan = f"{id_order}_{file_desain.name}"
-                                with open(os.path.join("desain_topi", nama_file_simpan), "wb") as f:
-                                    f.write(file_desain.getbuffer())
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            # Ganti form_submit_button jadi tombol biasa (st.button)
+            if st.button("💾 Simpan & Teruskan ke Keuangan", use_container_width=True):
+                if nama_klien == "":
+                    st.error("⚠️ Nama Klien harus diisi!")
+                else:
+                    with st.spinner("🚀 Sedang menyimpan pesanan..."):
+                        id_order = f"ORD-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+                        nama_file_simpan = "Tidak Ada Desain"
+                        
+                        if file_desain:
+                            os.makedirs("desain_topi", exist_ok=True)
+                            nama_file_simpan = f"{id_order}_{file_desain.name}"
+                            with open(os.path.join("desain_topi", nama_file_simpan), "wb") as f:
+                                f.write(file_desain.getbuffer())
 
-                            data_baru = pd.DataFrame([{
-                                "ID Order": id_order, "Tanggal": datetime.now().strftime("%Y-%m-%d"), 
-                                "Nama Klien": nama_klien, "Model Topi": model_topi, "Jumlah (Pcs)": jumlah, 
-                                "Total Harga": total_harga_otomatis, "File Desain": nama_file_simpan, 
-                                "Status Validasi": "Menunggu Pembayaran"
-                            }])
-                            conn.update(worksheet="Pemasaran", data=pd.concat([df_pem, data_baru], ignore_index=True))
-                            st.cache_data.clear()
-                            st.rerun()
+                        data_baru = pd.DataFrame([{
+                            "ID Order": id_order, "Tanggal": datetime.now().strftime("%Y-%m-%d"), 
+                            "Nama Klien": nama_klien, "Model Topi": model_topi, "Jumlah (Pcs)": jumlah, 
+                            "Total Harga": total_harga_otomatis, "File Desain": nama_file_simpan, 
+                            "Status Validasi": "Menunggu Pembayaran"
+                        }])
+                        conn.update(worksheet="Pemasaran", data=pd.concat([df_pem, data_baru], ignore_index=True))
+                        st.cache_data.clear()
+                        st.success("✅ Pesanan berhasil disimpan!")
+                        st.rerun()
 
     # ==========================================
     # TAB 2: DATABASE PEMASARAN
