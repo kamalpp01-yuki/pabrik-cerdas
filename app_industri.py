@@ -91,6 +91,43 @@ st.markdown("""
             padding-bottom: 2rem !important;
         }
     }
+    /* ========================================================= */
+    /* 6.  TAB STREAMLIT (PILL/CARD TABS)    */
+    /* ========================================================= */
+    
+    /* Membentuk tombol tab */
+    button[data-baseweb="tab"] {
+        background-color: #1E1E24 !important;
+        border: 1px solid #393E46 !important;
+        border-bottom: none !important;
+        border-radius: 12px 12px 0px 0px !important; /* Melengkung di atas */
+        padding: 10px 24px !important;
+        margin-right: 5px !important;
+        color: #A9A9A9 !important;
+        font-weight: 600 !important;
+        font-size: 16px !important;
+        transition: all 0.3s ease-in-out !important;
+    }
+
+    /* Efek saat mouse diarahkan (Hover) */
+    button[data-baseweb="tab"]:hover {
+        background-color: #2A2F38 !important;
+        color: #00ADB5 !important;
+        transform: translateY(-2px);
+    }
+
+    /* Efek saat Tab sedang aktif / dipilih */
+    button[data-baseweb="tab"][aria-selected="true"] {
+        background: linear-gradient(135deg, #00ADB5 0%, #17a2b8 100%) !important;
+        color: white !important;
+        border: none !important;
+        box-shadow: 0px -4px 15px rgba(0, 173, 181, 0.4) !important; /* Cahaya glowing */
+    }
+
+    /* Menghilangkan garis biru tipis bawaan Streamlit */
+    div[data-baseweb="tab-highlight"] {
+        display: none !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
