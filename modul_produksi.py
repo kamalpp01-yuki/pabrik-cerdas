@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 import os
 
-def jalankan(df_pem, df_prod, df_bahan, df_jadi, conn):
+def jalankan(df_pem, df_prod, df_bahan, df_jadi, df_produk, conn): 
     st.markdown("## 🏭 Dapur Produksi (Sistem Kanban)")
     
     # Pastikan data stok berupa angka biar bisa dihitung
@@ -136,11 +136,21 @@ def jalankan(df_pem, df_prod, df_bahan, df_jadi, conn):
                     with col_desc:
                         st.markdown(f"#### {row['ID Order']} - {row['Nama Klien']} ({row['Jumlah (Pcs)']} Pcs)")
                         
-                        # Hitung Kebutuhan BOM
+                        # Hitung Kebutuhan BOM (DYNAMIC DARI MASTER PRODUK)
                         jml = int(row['Jumlah (Pcs)'])
-                        butuh_kain = jml * 0.1
-                        butuh_benang = jml * 0.05
-                        butuh_pengait = jml * 1
+                        model_topi_order = str(row['Model Topi'])
+                        
+                        # Ambil resep (BOM) dari Master Data
+                        try:
+                            resep = df_produk[df_produk['Model Topi'] == model_topi_order].iloc[0]
+                            butuh_kain = jml * float(resep['Kain (m2)'])
+                            butuh_benang = jml * float(resep['Benang (Roll)'])
+                            butuh_pengait = jml * float(resep['Pengait (Pcs)'])
+                        except Exception:
+                            # Kalau produk dihapus, pakai nilai darurat
+                            butuh_kain = jml * 0.1
+                            butuh_benang = jml * 0.05
+                            butuh_pengait = jml * 1
                         
                         # Tarik Stok Aktual dari df_bahan
                         stok_kain = df_bahan.loc[df_bahan['Nama Bahan'].astype(str).str.contains('Kain', case=False, na=False), 'Stok'].sum()
