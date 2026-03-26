@@ -92,29 +92,31 @@ st.markdown("""
         }
     }
  /* ========================================================= */
-    /* 6. SULAP TAB JADI KAPSUL MELAYANG (APPLE/iOS STYLE)       */
+    /* 6. SULAP TAB JADI MINIMALIS NEON (FUTURISTIK)             */
     /* ========================================================= */
     button[data-baseweb="tab"] {
         background-color: transparent !important;
         border: none !important;
-        border-radius: 50px !important; /* Bentuk kapsul bundar sempurna */
-        padding: 8px 24px !important;
-        margin-right: 8px !important;
-        color: #8A8D93 !important;
-        font-weight: 700 !important;
-        font-size: 15px !important;
+        border-bottom: 3px solid transparent !important;
+        border-radius: 0px !important;
+        padding: 10px 15px !important;
+        margin-right: 15px !important;
+        color: #6C727F !important;
+        font-weight: 800 !important;
+        font-size: 16px !important;
+        text-transform: uppercase !important; /* Huruf kapital semua */
+        letter-spacing: 1px !important;
         transition: all 0.3s ease !important;
     }
 
     button[data-baseweb="tab"]:hover {
-        background-color: rgba(0, 173, 181, 0.1) !important;
-        color: #00ADB5 !important;
+        color: #EEEEEE !important;
     }
 
     button[data-baseweb="tab"][aria-selected="true"] {
-        background-color: #00ADB5 !important; /* Warna cyan menyala */
-        color: #FFFFFF !important;
-        box-shadow: 0px 5px 15px rgba(0, 173, 181, 0.3) !important;
+        color: #00ADB5 !important;
+        border-bottom: 3px solid #00ADB5 !important; /* Garis bawah neon */
+        text-shadow: 0px 0px 12px rgba(0, 173, 181, 0.6) !important; /* Efek teks bercahaya */
     }
 
     /* Hilangkan garis biru bawaan */
