@@ -33,29 +33,39 @@ st.markdown("""
         transform: translateY(-5px);
         box-shadow: 4px 8px 15px rgba(0, 173, 181, 0.3);
     }
-
-    /* 2. Merombak Radio Button Sidebar menjadi Menu Tombol Elegan */
+   
+    /* 2. Merombak Total Navigasi Sidebar jadi Menu Tombol Premium ✨ */
+    /* Menyembunyikan lingkaran radio button bawaan */
     div[data-testid="stSidebar"] div[role="radiogroup"] > label > div:first-child {
-        display: none; 
+        display: none !important; 
     }
+    
+    /* Membuat label teks menjadi kotak menu interaktif */
     div[data-testid="stSidebar"] div[role="radiogroup"] > label {
-        background-color: transparent;
-        border: 1px solid #00ADB5;
-        padding: 12px 20px;
-        border-radius: 8px;
-        margin-bottom: 8px;
+        background-color: rgba(255, 255, 255, 0.05); /* Sedikit card-like transparan */
+        border: 1px solid rgba(0, 173, 181, 0.3); /* Garis accent warna cyan */
+        padding: 12px 18px !important;
+        border-radius: 8px !important;
+        margin-bottom: 8px !important;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: all 0.3s ease-in-out !important;
+        box-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+        color: #EEEEEE !important;
     }
+    
+    /* Efek saat mouse mengarah (Hover) */
     div[data-testid="stSidebar"] div[role="radiogroup"] > label:hover {
-        background-color: rgba(0, 173, 181, 0.2);
-        transform: translateX(5px);
+        background-color: rgba(0, 173, 181, 0.1) !important;
+        border-color: #00ADB5 !important;
+        transform: scale(1.02) translateX(3px); /* Sedikit membesar & geser kanan */
     }
+    
+    /* Efek saat Modul terpilih / aktif (Selected) */
     div[data-testid="stSidebar"] div[role="radiogroup"] > label[data-checked="true"] {
-        background-color: #00ADB5;
+        background: linear-gradient(135deg, #00ADB5 0%, #17a2b8 100%) !important;
         color: white !important;
-        box-shadow: 0px 4px 10px rgba(0, 173, 181, 0.5);
-        border: none;
+        box-shadow: 0px 4px 10px rgba(0, 173, 181, 0.5) !important; /* Cahaya glowing */
+        border: none !important;
     }
 
     /* 3. Efek Tombol (Button) */
