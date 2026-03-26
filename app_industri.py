@@ -33,34 +33,43 @@ st.markdown("""
         box-shadow: 4px 8px 15px rgba(0, 173, 181, 0.3);
     }
    
-    /* 2. Merombak Total Navigasi Sidebar jadi Menu Tombol Premium ✨ */
-    div[data-testid="stSidebar"] div[role="radiogroup"] > label > div:first-child {
-        display: none !important; 
-    }
-    
-    div[data-testid="stSidebar"] div[role="radiogroup"] > label {
-        background-color: rgba(255, 255, 255, 0.05); 
-        border: 1px solid rgba(0, 173, 181, 0.3); 
+/* 2. Merombak Total Navigasi Sidebar jadi Menu Tombol Premium ✨ */
+    /* Membuat label teks menjadi kotak menu interaktif */
+    [data-testid="stSidebar"] [data-testid="stRadio"] label {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid rgba(0, 173, 181, 0.3) !important;
         padding: 12px 18px !important;
         border-radius: 8px !important;
         margin-bottom: 8px !important;
-        cursor: pointer;
+        cursor: pointer !important;
         transition: all 0.3s ease-in-out !important;
-        box-shadow: 2px 2px 8px rgba(0,0,0,0.3);
-        color: #EEEEEE !important;
+        width: 100% !important;
     }
-    
-    div[data-testid="stSidebar"] div[role="radiogroup"] > label:hover {
+
+    /* Efek saat mouse mengarah (Hover) */
+    [data-testid="stSidebar"] [data-testid="stRadio"] label:hover {
         background-color: rgba(0, 173, 181, 0.1) !important;
         border-color: #00ADB5 !important;
-        transform: scale(1.02) translateX(3px); 
+        transform: scale(1.02) translateX(3px) !important;
     }
-    
-    div[data-testid="stSidebar"] div[role="radiogroup"] > label[data-checked="true"] {
+
+    /* Efek saat Modul terpilih / aktif (Selected) */
+    [data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) {
         background: linear-gradient(135deg, #00ADB5 0%, #17a2b8 100%) !important;
-        color: white !important;
-        box-shadow: 0px 4px 10px rgba(0, 173, 181, 0.5) !important; 
+        box-shadow: 0px 4px 10px rgba(0, 173, 181, 0.5) !important;
         border: none !important;
+    }
+
+    /* Memastikan teks ikut putih & tebal saat aktif */
+    [data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) div,
+    [data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) p {
+        color: white !important;
+        font-weight: bold !important;
+    }
+
+    /* Menyembunyikan lingkaran radio button bawaan dengan paksa! */
+    [data-testid="stSidebar"] [data-testid="stRadio"] label > div:first-child {
+        display: none !important; 
     }
 
     /* 3. Efek Tombol (Button) */
