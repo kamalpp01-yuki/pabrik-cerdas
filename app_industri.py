@@ -92,36 +92,35 @@ st.markdown("""
         }
     }
  /* ========================================================= */
-    /* 6. SULAP TAB JADI NEUMORPHISM (TOMBOL FISIK 3D)           */
+    /* 6. SULAP TAB JADI GOOGLE MATERIAL (CLEAN & SIMPLE)        */
     /* ========================================================= */
     button[data-baseweb="tab"] {
-        background-color: #222831 !important; /* Warna dasar sama dengan background */
+        background-color: transparent !important;
         border: none !important;
-        border-radius: 12px !important;
-        padding: 10px 25px !important;
-        margin-right: 15px !important;
-        margin-bottom: 10px !important;
-        color: #8A8D93 !important;
-        font-weight: 700 !important;
-        font-size: 15px !important;
-        /* Bayangan ganda: gelap di kanan bawah, terang di kiri atas */
-        box-shadow: 5px 5px 10px #15191e, -5px -5px 10px #2f3744 !important;
-        transition: all 0.2s ease !important;
+        border-bottom: 4px solid transparent !important; /* Disiapkan tempat buat garis */
+        border-radius: 4px 4px 0 0 !important;
+        padding: 12px 20px !important;
+        margin-right: 5px !important;
+        color: #7A8089 !important;
+        font-size: 16px !important;
+        font-weight: 600 !important;
+        transition: all 0.2s ease-in-out !important;
     }
 
     /* Saat mouse lewat */
     button[data-baseweb="tab"]:hover {
         color: #EEEEEE !important;
+        background-color: rgba(255, 255, 255, 0.03) !important;
     }
 
-    /* Saat Tab Aktif (Tombol ditekan ke dalam) */
+    /* Saat Tab Aktif */
     button[data-baseweb="tab"][aria-selected="true"] {
-        color: #00ADB5 !important;
-        /* Inset shadow bikin efek bolong/tertekan ke dalam */
-        box-shadow: inset 5px 5px 10px #15191e, inset -5px -5px 10px #2f3744 !important;
+        color: #00ADB5 !important; /* Teks berubah tosca */
+        border-bottom: 4px solid #00ADB5 !important; /* Muncul garis tosca tebal */
+        background-color: rgba(0, 173, 181, 0.05) !important; /* Background tosca super pudar */
     }
 
-    /* Hilangkan garis biru bawaan Streamlit */
+    /* Hilangkan garis biru tipis bawaan Streamlit */
     div[data-baseweb="tab-highlight"] {
         display: none !important;
     }
