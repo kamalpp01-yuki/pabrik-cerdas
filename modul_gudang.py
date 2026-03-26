@@ -4,25 +4,31 @@ from datetime import datetime
 import os
 
 def jalankan(df_pem, df_bahan, conn):
-    st.markdown("## 📦 Modul Gudang Terpadu")
+    st.markdown("## 📦 Modul Gudang & Distribusi Terpadu")
     
-    # Hitung total barang jadi berdasarkan orderan yang sudah selesai
+    # --- PENGELOMPOKAN DATA BERDASARKAN STATUS ---
     df_siap_kirim = df_pem[df_pem['Status Validasi'] == 'Selesai & Masuk Gudang'].copy()
-    if not df_siap_kirim.empty:
-        df_siap_kirim['Jumlah (Pcs)'] = pd.to_numeric(df_siap_kirim['Jumlah (Pcs)'], errors='coerce').fillna(0)
-        total_stok_jadi = df_siap_kirim['Jumlah (Pcs)'].sum()
-    else:
-        total_stok_jadi = 0
+    df_sedang_dikirim = df_pem[df_pem['Status Validasi'] == 'Pesanan Dikirim'].copy()
+    
+    total_stok_jadi = pd.to_numeric(df_siap_kirim['Jumlah (Pcs)'], errors='coerce').fillna(0).sum() if not df_siap_kirim.empty else 0
+    total_di_jalan = len(df_sedang_dikirim)
 
     df_bahan['Stok'] = pd.to_numeric(df_bahan['Stok'], errors='coerce').fillna(0)
     bahan_menipis = len(df_bahan[df_bahan['Stok'] < 20])
     
-    c1, c2 = st.columns(2)
-    c1.metric("📦 Total Barang Jadi (Siap Kirim)", f"{total_stok_jadi:,.0f} Pcs")
-    c2.metric("⚠️ Material Perlu Restock", f"{bahan_menipis} Item", delta="- Cek Gudang Bahan!", delta_color="inverse")
+    # --- MINI DASHBOARD ---
+    c1, c2, c3 = st.columns(3)
+    c1.metric("📦 Gudang Barang Jadi", f"{total_stok_jadi:,.0f} Pcs")
+    c2.metric("🚚 Sedang Distribusi", f"{total_di_jalan} Order", delta="Di Perjalanan")
+    c3.metric("⚠️ Material Perlu Restock", f"{bahan_menipis} Item", delta="- Cek Bahan!", delta_color="inverse")
     st.divider()
 
-    tab1, tab2, tab3 = st.tabs(["🛒 Restock & Tambah Bahan", "🏭 Kapasitas Bahan Baku", "🛍️ Gudang Barang Jadi (Per Klien)"])
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "🛒 Restock & Tambah Bahan", 
+        "🏭 Kapasitas Bahan Baku", 
+        "🛍️ Gudang Barang Jadi", 
+        "🚚 Distribusi Pengiriman"
+    ])
 
     # ==========================================
     # TAB 1: RESTOCK & TAMBAH BAHAN BARU
@@ -97,14 +103,14 @@ def jalankan(df_pem, df_bahan, conn):
             st.dataframe(df_bahan, use_container_width=True)
 
     # ==========================================
-    # TAB 3: GUDANG BARANG JADI (CARD VIEW PER KLIEN)
+    # TAB 3: GUDANG BARANG JADI (PER KLIEN)
     # ==========================================
     with tab3:
-        st.markdown("### 🛍️ Daftar Pesanan Selesai (Siap Kirim)")
-        st.info("💡 Berikut adalah orderan klien yang sudah lolos QC dan menunggu untuk dipacking / dikirim.")
+        st.markdown("### 🛍️ Daftar Pesanan Selesai (Menunggu Kurir)")
+        st.info("💡 Klik tombol Kirim Pesanan jika barang sudah diangkut oleh kurir/ekspedisi.")
         
         if df_siap_kirim.empty:
-            st.success("🏝️ Gudang barang jadi kosong. Belum ada orderan yang masuk tahap selesai.")
+            st.success("🏝️ Gudang barang jadi kosong. Belum ada orderan yang antre untuk dikirim.")
         else:
             for index, row in df_siap_kirim.iterrows():
                 with st.container(border=True):
@@ -121,14 +127,52 @@ def jalankan(df_pem, df_bahan, conn):
                         st.markdown(f"#### {row['ID Order']}")
                         st.write(f"🏢 **Klien / Instansi:** {row['Nama Klien']}")
                         st.write(f"🧢 **Isi Paket:** {row['Model Topi']} ({row['Jumlah (Pcs)']} Pcs)")
-                        st.caption(f"📅 Order Masuk: {row['Tanggal']}")
+                        st.caption("Status: 📦 Berada di Gudang")
                         
                     with col_btn:
                         st.markdown("<br>", unsafe_allow_html=True)
-                        # Tombol Pamungkas Siklus Pabrik!
+                        # Tombol pindah ke Distribusi
                         if st.button("🚚 Kirim Pesanan", key=f"kirim_{row['ID Order']}", use_container_width=True, type="primary"):
-                            with st.spinner("Memproses pengiriman ke ekspedisi..."):
-                                df_pem.loc[df_pem['ID Order'] == row['ID Order'], 'Status Validasi'] = 'Pesanan Terkirim'
+                            with st.spinner("Memproses ke bagian distribusi..."):
+                                df_pem.loc[df_pem['ID Order'] == row['ID Order'], 'Status Validasi'] = 'Pesanan Dikirim'
                                 conn.update(worksheet="Pemasaran", data=df_pem)
                                 st.cache_data.clear()
+                                st.rerun()
+
+    # ==========================================
+    # TAB 4: DISTRIBUSI PENGIRIMAN (FITUR BARU)
+    # ==========================================
+    with tab4:
+        st.markdown("### 🚚 Radar Distribusi & Pengiriman")
+        st.info("💡 Orderan di bawah ini sedang dalam perjalanan ke alamat klien. Klik Selesaikan jika klien sudah menerima barang.")
+        
+        if df_sedang_dikirim.empty:
+            st.success("🏝️ Tidak ada orderan yang sedang dalam perjalanan.")
+        else:
+            for index, row in df_sedang_dikirim.iterrows():
+                with st.container(border=True):
+                    col_img, col_desc, col_btn = st.columns([1, 2.5, 1])
+                    
+                    with col_img:
+                        path_gambar = os.path.join("desain_topi", str(row['File Desain']))
+                        if os.path.exists(path_gambar): 
+                            st.image(path_gambar, use_container_width=True)
+                        else: 
+                            st.info("🖼️ No Image")
+                            
+                    with col_desc:
+                        st.markdown(f"#### {row['ID Order']}")
+                        st.write(f"🏢 **Tujuan:** {row['Nama Klien']}")
+                        st.write(f"📦 **Paket:** {row['Model Topi']} ({row['Jumlah (Pcs)']} Pcs)")
+                        st.caption("Status: 💨 Sedang Di Jalan / Di Ekspedisi")
+                        
+                    with col_btn:
+                        st.markdown("<br>", unsafe_allow_html=True)
+                        # Tombol penyelesaian akhir!
+                        if st.button("✅ Selesaikan (Diterima)", key=f"selesai_{row['ID Order']}", use_container_width=True):
+                            with st.spinner("Menyelesaikan pesanan..."):
+                                df_pem.loc[df_pem['ID Order'] == row['ID Order'], 'Status Validasi'] = 'Terkirim'
+                                conn.update(worksheet="Pemasaran", data=df_pem)
+                                st.cache_data.clear()
+                                st.success("Pesanan berhasil diselesaikan!")
                                 st.rerun()
