@@ -78,7 +78,7 @@ st.markdown("""
         transform: scale(1.03);
     }
     
-    /* 4. Ngilangin menu bawaan Streamlit */
+    /* 4. Ngilangin menu bawaan Streamlit d*/
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 
