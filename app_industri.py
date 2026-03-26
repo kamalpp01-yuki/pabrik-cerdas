@@ -224,10 +224,18 @@ def main_app():
     # MODUL 1: PEMASARAN
     # ==========================================
     elif menu == "🤝 Pemasaran (Sales)":
-        st.header("ERP Pemasaran & Order")
-        kolom_pemasaran = ["ID Order", "Tanggal", "Nama Klien", "Model Topi", "Jumlah (Pcs)", "Total Harga", "File Desain", "Status Validasi"]
-        df_pemasaran = get_data("Pemasaran", [0,1,2,3,4,5,6,7], kolom_pemasaran)
-        modul_pemasaran.jalankan(df_pemasaran, conn)
+        st.header("🤝 Modul Pemasaran & Order")
+        
+        with st.spinner("⏳ Memuat data Pemasaran & Katalog Produk..."):
+            df_pem = conn.read(worksheet="Pemasaran").dropna(how="all")
+            # Sedot data Master Produk
+            try:
+                df_produk = conn.read(worksheet="Master_Produk").dropna(how="all")
+            except Exception:
+                df_produk = pd.DataFrame(columns=["Model Topi", "Kain (m2)", "Benang (Roll)", "Pengait (Pcs)", "Harga Satuan (Rp)"])
+            
+            import modul_pemasaran
+            modul_pemasaran.jalankan(df_pem, df_produk, conn) # <-- Tambahkan df_produk di sini
 
     # ==========================================
     # MODUL 2: KEUANGAN (VALIDATOR)
@@ -246,27 +254,33 @@ def main_app():
         import modul_keuangan
         modul_keuangan.jalankan(df_uang, df_pemasaran, conn)
 
-    # ==========================================
+# ==========================================
     # MODUL 3: PRODUKSI (PPIC & QC)
     # ==========================================
     elif menu == "🏭 Produksi (PPIC & QC)":
-        st.header("ERP Produksi & Quality Control")
+        st.header("🏭 ERP Produksi & Quality Control")
         
-        # Insinyur sejati memanggil 4 tabel sekaligus!
-        kolom_pem = ["ID Order", "Tanggal", "Nama Klien", "Model Topi", "Jumlah (Pcs)", "Total Harga", "File Desain", "Status Validasi"]
-        df_pem = get_data("Pemasaran", [0,1,2,3,4,5,6,7], kolom_pem)
-        
-        kolom_prod = ["ID Produksi", "ID Order", "Model Topi", "Jumlah (Pcs)", "Status Produksi"]
-        df_prod = get_data("Produksi", [0,1,2,3,4], kolom_prod)
-        
-        kolom_bahan = ["Nama Bahan", "Stok", "Satuan", "Max Kapasitas"]
-        df_bahan = get_data("Bahan_Baku", [0,1,2,3], kolom_bahan)
-        
-        kolom_jadi = ["Model Topi", "Stok", "Satuan", "Max Kapasitas"]
-        df_jadi = get_data("Barang_Jadi", [0,1,2,3], kolom_jadi)
-        
-        import modul_produksi
-        modul_produksi.jalankan(df_pem, df_prod, df_bahan, df_jadi, conn)
+        with st.spinner("⏳ Memuat data Dapur Produksi & Master BOM..."):
+            # Insinyur sejati memanggil 5 tabel sekaligus!
+            kolom_pem = ["ID Order", "Tanggal", "Nama Klien", "Model Topi", "Jumlah (Pcs)", "Total Harga", "File Desain", "Status Validasi"]
+            df_pem = get_data("Pemasaran", [0,1,2,3,4,5,6,7], kolom_pem)
+            
+            kolom_prod = ["ID Produksi", "ID Order", "Model Topi", "Jumlah (Pcs)", "Status Produksi"]
+            df_prod = get_data("Produksi", [0,1,2,3,4], kolom_prod)
+            
+            kolom_bahan = ["Nama Bahan", "Stok", "Satuan", "Max Kapasitas"]
+            df_bahan = get_data("Bahan_Baku", [0,1,2,3], kolom_bahan)
+            
+            kolom_jadi = ["Model Topi", "Stok", "Satuan", "Max Kapasitas"]
+            df_jadi = get_data("Barang_Jadi", [0,1,2,3], kolom_jadi)
+            
+            # --- TAMBAHAN BARU: Sedot Master Data Produk untuk BOM Dinamis ---
+            kolom_produk = ["Model Topi", "Kain (m2)", "Benang (Roll)", "Pengait (Pcs)", "Harga Satuan (Rp)"]
+            df_produk = get_data("Master_Produk", [0,1,2,3,4], kolom_produk)
+            
+            import modul_produksi
+            # Kirim df_produk ke fungsi jalankan!
+            modul_produksi.jalankan(df_pem, df_prod, df_bahan, df_jadi, df_produk, conn)
 
     # ==========================================
     # MODUL 4: GUDANG (INVENTORY) - VERSI ANTI-ERROR
