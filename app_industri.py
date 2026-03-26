@@ -92,35 +92,36 @@ st.markdown("""
         }
     }
  /* ========================================================= */
-    /* 6. SULAP TAB JADI GARIS NEON EDGE (TECH STYLE)            */
+    /* 6. SULAP TAB JADI NEUMORPHISM (TOMBOL FISIK 3D)           */
     /* ========================================================= */
     button[data-baseweb="tab"] {
-        background-color: transparent !important;
-        border: 2px solid #393E46 !important; /* Garis pinggir abu-abu */
-        border-radius: 6px !important;
-        padding: 8px 22px !important;
-        margin-right: 10px !important;
+        background-color: #222831 !important; /* Warna dasar sama dengan background */
+        border: none !important;
+        border-radius: 12px !important;
+        padding: 10px 25px !important;
+        margin-right: 15px !important;
+        margin-bottom: 10px !important;
         color: #8A8D93 !important;
-        font-weight: bold !important;
-        font-size: 14px !important;
-        transition: all 0.3s ease !important;
+        font-weight: 700 !important;
+        font-size: 15px !important;
+        /* Bayangan ganda: gelap di kanan bawah, terang di kiri atas */
+        box-shadow: 5px 5px 10px #15191e, -5px -5px 10px #2f3744 !important;
+        transition: all 0.2s ease !important;
     }
 
-    /* Saat mouse cuma lewat (Hover) */
+    /* Saat mouse lewat */
     button[data-baseweb="tab"]:hover {
-        border-color: rgba(0, 173, 181, 0.5) !important;
-        color: #00ADB5 !important;
+        color: #EEEEEE !important;
     }
 
-    /* Saat Tab Aktif / Terpilih */
+    /* Saat Tab Aktif (Tombol ditekan ke dalam) */
     button[data-baseweb="tab"][aria-selected="true"] {
-        background-color: rgba(0, 173, 181, 0.1) !important; /* Isi transparan cyan */
-        border-color: #00ADB5 !important; /* Garis pinggir cyan full */
         color: #00ADB5 !important;
-        box-shadow: 0px 0px 10px rgba(0, 173, 181, 0.3) !important; /* Glow tipis */
+        /* Inset shadow bikin efek bolong/tertekan ke dalam */
+        box-shadow: inset 5px 5px 10px #15191e, inset -5px -5px 10px #2f3744 !important;
     }
 
-    /* Menghilangkan garis biru bawaan Streamlit */
+    /* Hilangkan garis biru bawaan Streamlit */
     div[data-baseweb="tab-highlight"] {
         display: none !important;
     }
