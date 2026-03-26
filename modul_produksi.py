@@ -136,64 +136,67 @@ def jalankan(df_pem, df_prod, df_bahan, df_jadi, df_produk, conn):
                     with col_desc:
                         st.markdown(f"#### {row['ID Order']} - {row['Nama Klien']} ({row['Jumlah (Pcs)']} Pcs)")
                         
-                        # Hitung Kebutuhan BOM (DYNAMIC DARI MASTER PRODUK)
+                        # --- MESIN PENGHITUNG BOM DINAMIS ---
                         jml = int(row['Jumlah (Pcs)'])
                         model_topi_order = str(row['Model Topi'])
                         
-                        # Ambil resep (BOM) dari Master Data
+                        # 1. Tarik resep BOM dari Master Produk
+                        bom_kebutuhan = {}
                         try:
                             resep = df_produk[df_produk['Model Topi'] == model_topi_order].iloc[0]
-                            butuh_kain = jml * float(resep['Kain (m2)'])
-                            butuh_benang = jml * float(resep['Benang (Roll)'])
-                            butuh_pengait = jml * float(resep['Pengait (Pcs)'])
-                        except Exception:
-                            # Kalau produk dihapus, pakai nilai darurat
-                            butuh_kain = jml * 0.1
-                            butuh_benang = jml * 0.05
-                            butuh_pengait = jml * 1
-                        
-                        # Tarik Stok Aktual dari df_bahan
-                        stok_kain = df_bahan.loc[df_bahan['Nama Bahan'].astype(str).str.contains('Kain', case=False, na=False), 'Stok'].sum()
-                        stok_benang = df_bahan.loc[df_bahan['Nama Bahan'].astype(str).str.contains('Benang', case=False, na=False), 'Stok'].sum()
-                        stok_pengait = df_bahan.loc[df_bahan['Nama Bahan'].astype(str).str.contains('Pengait', case=False, na=False), 'Stok'].sum()
+                            bom_str = str(resep['BOM'])
+                            
+                            # Pecah teks "Kain:0.1|Benang:0.05" jadi Dictionary
+                            if pd.notna(bom_str) and bom_str != "":
+                                for item in bom_str.split("|"):
+                                    nama_bahan, qty_bahan = item.split(":")
+                                    bom_kebutuhan[nama_bahan] = float(qty_bahan) * jml
+                        except Exception as e:
+                            st.error("BOM tidak ditemukan untuk model ini!")
 
-                        # --- PERBAIKAN BUG DI SINI ---
-                        # Kita pisahkan kunci untuk memori status dan kunci untuk tombol
+                        # 2. Pisahkan Kunci Tombol & State
                         kunci_state = f"status_cek_{row['ID Order']}"
                         kunci_btn = f"tombol_cek_{row['ID Order']}"
                         
                         if st.button("🔍 Cek Ketersediaan Bahan Baku", key=kunci_btn):
                             st.session_state[kunci_state] = True
                             
-                        # Logika Setelah Tombol Cek Ditekan
-                        if st.session_state.get(kunci_state, False):
-                            st.markdown("**Status Material di Gudang:**")
-                            c1, c2, c3 = st.columns(3)
-                            
-                            kain_ok = stok_kain >= butuh_kain
-                            benang_ok = stok_benang >= butuh_benang
-                            pengait_ok = stok_pengait >= butuh_pengait
-                            
-                            c1.success(f"✅ Kain: {stok_kain}/{butuh_kain}m2") if kain_ok else c1.error(f"❌ Kain: {stok_kain}/{butuh_kain}m2")
-                            c2.success(f"✅ Benang: {stok_benang}/{butuh_benang} Roll") if benang_ok else c2.error(f"❌ Benang: {stok_benang}/{butuh_benang} Roll")
-                            c3.success(f"✅ Pengait: {stok_pengait}/{butuh_pengait} Pcs") if pengait_ok else c3.error(f"❌ Pengait: {stok_pengait}/{butuh_pengait} Pcs")
-                            
-                            if kain_ok and benang_ok and pengait_ok:
-                                st.info("🎉 Semua bahan baku tersedia! Lanjut ke pemotongan.")
-                                if st.button("✂️ Potong Bahan & Masuk Tahap Jahit", key=f"potong_{row['ID Order']}", use_container_width=True):
-                                    # 1. Potong Bahan
-                                    df_bahan.loc[df_bahan['Nama Bahan'].astype(str).str.contains('Kain', case=False, na=False), 'Stok'] -= butuh_kain
-                                    df_bahan.loc[df_bahan['Nama Bahan'].astype(str).str.contains('Benang', case=False, na=False), 'Stok'] -= butuh_benang
-                                    df_bahan.loc[df_bahan['Nama Bahan'].astype(str).str.contains('Pengait', case=False, na=False), 'Stok'] -= butuh_pengait
-                                    conn.update(worksheet="Bahan_Baku", data=df_bahan)
+                        # 3. Logika Pengecekan & Pemotongan Dinamis
+                            if st.session_state.get(kunci_state, False):
+                                st.markdown("**Status Material di Gudang:**")
+                                
+                                semua_ok = True
+                                for bahan, butuh in bom_kebutuhan.items():
+                                    stok_aktual = df_bahan.loc[df_bahan['Nama Bahan'] == bahan, 'Stok'].sum()
+                                    if stok_aktual >= butuh:
+                                        st.success(f"✅ {bahan}: {stok_aktual} / {butuh}")
+                                    else:
+                                        semua_ok = False
+                                        st.error(f"❌ {bahan}: {stok_aktual} / {butuh} (KURANG!)")
+                                
+                                if semua_ok and len(bom_kebutuhan) > 0:
+                                    st.info("🎉 Semua bahan baku tersedia sesuai resep! Lanjut ke pemotongan.")
+                                    if st.button("✂️ Potong Bahan & Masuk Tahap Jahit", key=f"potong_{row['ID Order']}", use_container_width=True):
+                                        
+                                        # Potong bahan secara dinamis sesuai dictionary BOM!
+                                        for bahan, butuh in bom_kebutuhan.items():
+                                            df_bahan.loc[df_bahan['Nama Bahan'] == bahan, 'Stok'] -= butuh
+                                        conn.update(worksheet="Bahan_Baku", data=df_bahan)
 
-                                    # 2. Update Produksi & Pemasaran
-                                    id_prod = f"PRD-{datetime.now().strftime('%H%M%S')}"
-                                    data_prod = pd.DataFrame([{"ID Produksi": id_prod, "ID Order": row['ID Order'], "Model Topi": row['Model Topi'], "Jumlah (Pcs)": jml, "Status Produksi": "Tahap 1: Pemotongan"}])
-                                    conn.update(worksheet="Produksi", data=pd.concat([df_prod, data_prod], ignore_index=True))
-                                    
-                                    df_pem.loc[df_pem['ID Order'] == row['ID Order'], 'Status Validasi'] = 'Sedang Diproduksi'
-                                    conn.update(worksheet="Pemasaran", data=df_pem)
+                                        # Update Produksi & Pemasaran
+                                        id_prod = f"PRD-{datetime.now().strftime('%H%M%S')}"
+                                        data_prod = pd.DataFrame([{"ID Produksi": id_prod, "ID Order": row['ID Order'], "Model Topi": row['Model Topi'], "Jumlah (Pcs)": jml, "Status Produksi": "Tahap 1: Pemotongan"}])
+                                        conn.update(worksheet="Produksi", data=pd.concat([df_prod, data_prod], ignore_index=True))
+                                        
+                                        df_pem.loc[df_pem['ID Order'] == row['ID Order'], 'Status Validasi'] = 'Sedang Diproduksi'
+                                        conn.update(worksheet="Pemasaran", data=df_pem)
+                                        
+                                        st.session_state[kunci_state] = False
+                                        st.cache_data.clear(); st.rerun()
+                                elif len(bom_kebutuhan) == 0:
+                                    st.error("⚠️ Model topi ini belum punya resep BOM!")
+                                else:
+                                    st.error("🚨 BAHAN BAKU KURANG! Silakan lapor dan Restock di Modul Gudang.")
                                     
                                     # Reset state supaya aman
                                     st.session_state[kunci_state] = False

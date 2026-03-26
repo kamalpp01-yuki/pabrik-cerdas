@@ -226,16 +226,20 @@ def main_app():
     elif menu == "🤝 Pemasaran (Sales)":
         st.header("🤝 Modul Pemasaran & Order")
         
-        with st.spinner("⏳ Memuat data Pemasaran & Katalog Produk..."):
+        with st.spinner("⏳ Memuat data Pemasaran, Katalog, dan Gudang..."):
             df_pem = conn.read(worksheet="Pemasaran").dropna(how="all")
-            # Sedot data Master Produk
-            try:
-                df_produk = conn.read(worksheet="Master_Produk").dropna(how="all")
-            except Exception:
-                df_produk = pd.DataFrame(columns=["Model Topi", "Kain (m2)", "Benang (Roll)", "Pengait (Pcs)", "Harga Satuan (Rp)"])
+            
+            # Sedot Master Produk
+            try: df_produk = conn.read(worksheet="Master_Produk").dropna(how="all")
+            except: df_produk = pd.DataFrame(columns=["Model Topi", "Harga Satuan (Rp)", "BOM"])
+            
+            # --- TAMBAHAN: Sedot Bahan Baku buat pilihan BOM ---
+            try: df_bahan = conn.read(worksheet="Bahan_Baku").dropna(how="all")
+            except: df_bahan = pd.DataFrame(columns=["Nama Bahan", "Stok", "Satuan", "Max Kapasitas"])
             
             import modul_pemasaran
-            modul_pemasaran.jalankan(df_pem, df_produk, conn) # <-- Tambahkan df_produk di sini
+            # Kirim df_bahan juga ke fungsi!
+            modul_pemasaran.jalankan(df_pem, df_produk, df_bahan, conn)
 
     # ==========================================
     # MODUL 2: KEUANGAN (VALIDATOR)

@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 import os
 
-def jalankan(df_pem, df_produk, conn):
+def jalankan(df_pem, df_produk, df_bahan, conn): 
     # --- SISTEM NOTIFIKASI SETELAH RESET FORM ---
     if st.session_state.get('notif_sukses'):
         st.success(st.session_state['notif_sukses'])
@@ -134,32 +134,74 @@ def jalankan(df_pem, df_produk, conn):
                 st.rerun()
 
     # ==========================================
-    # TAB 3: MASTER DATA PRODUK
+    # TAB 3: MASTER DATA PRODUK & DYNAMIC BOM
     # ==========================================
     with tab3:
         st.markdown("### 🗄️ Katalog Produk & Bill of Materials (BOM)")
         
         with st.form("form_tambah_produk", clear_on_submit=True):
-            c1, c2, c3 = st.columns(3)
+            st.write("Tambah model topi & rakit resep bahannya di sini:")
+            
+            c1, c2 = st.columns(2)
             with c1:
-                nama_topi = st.text_input("Nama Varian Topi")
+                nama_topi = st.text_input("Nama Varian Topi", placeholder="Misal: Topi Jaring")
                 harga_jual = st.number_input("Harga Satuan (Rp)", min_value=0, step=5000)
+            
             with c2:
-                kebutuhan_kain = st.number_input("Kain (m2) per Pcs", min_value=0.0, step=0.01)
-                kebutuhan_benang = st.number_input("Benang (Roll) per Pcs", min_value=0.0, step=0.01)
-            with c3:
-                kebutuhan_pengait = st.number_input("Pengait (Pcs) per Pcs", min_value=0, step=1)
-                st.markdown("<br>", unsafe_allow_html=True)
-                submit_produk = st.form_submit_button("➕ Tambah Produk", use_container_width=True)
+                # Ambil daftar bahan dari Gudang
+                daftar_bahan_gudang = df_bahan["Nama Bahan"].tolist() if not df_bahan.empty else []
+                bahan_dipilih = st.multiselect("Bahan Baku yang Digunakan (Bisa pilih >1)", daftar_bahan_gudang)
+            
+            # Bikin input angka otomatis berdasarkan bahan yang dipilih
+            bom_dict = {}
+            if bahan_dipilih:
+                st.markdown("##### 📌 Tentukan Takaran Bahan per 1 Pcs Topi:")
+                cols = st.columns(len(bahan_dipilih))
+                for i, bahan in enumerate(bahan_dipilih):
+                    with cols[i]:
+                        # Cari satuan bahan ini di df_bahan biar jelas
+                        satuan = df_bahan.loc[df_bahan['Nama Bahan'] == bahan, 'Satuan'].values[0]
+                        qty = st.number_input(f"{bahan} ({satuan})", min_value=0.0, step=0.01, format="%.2f")
+                        if qty > 0:
+                            bom_dict[bahan] = qty
+
+            submit_produk = st.form_submit_button("➕ Tambah ke Katalog", use_container_width=True)
 
             if submit_produk:
-                if nama_topi == "" or harga_jual <= 0: st.error("Nama Topi dan Harga wajib diisi!")
+                if nama_topi == "" or harga_jual <= 0 or not bom_dict: 
+                    st.error("Nama, Harga, dan minimal 1 Bahan Baku dengan takaran > 0 wajib diisi!")
                 else:
-                    with st.spinner("Menyimpan produk..."):
-                        data_produk_baru = pd.DataFrame([{"Model Topi": nama_topi, "Kain (m2)": kebutuhan_kain, "Benang (Roll)": kebutuhan_benang, "Pengait (Pcs)": kebutuhan_pengait, "Harga Satuan (Rp)": harga_jual}])
+                    with st.spinner("Menyimpan produk dan resep BOM..."):
+                        # Format BOM jadi teks (Misal: Kain:0.1|Benang:0.05)
+                        bom_str = "|".join([f"{k}:{v}" for k, v in bom_dict.items()])
+                        
+                        data_produk_baru = pd.DataFrame([{
+                            "Model Topi": nama_topi, 
+                            "Harga Satuan (Rp)": harga_jual,
+                            "BOM": bom_str
+                        }])
                         conn.update(worksheet="Master_Produk", data=pd.concat([df_produk, data_produk_baru], ignore_index=True))
                         st.cache_data.clear(); st.rerun()
         
+        st.divider()
+        st.markdown("#### ✏️ Tabel Master Data")
+        st.info("💡 Kolom BOM berisi format resep. Lebih aman menghapus baris dan membuat baru daripada mengedit teks BOM secara manual.")
+        df_produk_edit = st.data_editor(df_produk, use_container_width=True, num_rows="dynamic", key="editor_produk")
+        
+        if st.button("💾 Simpan Perubahan Katalog", type="primary"):
+            st.session_state['konfirmasi_simpan_prod'] = True
+            
+        if st.session_state.get('konfirmasi_simpan_prod', False):
+            st.warning("Yakin simpan perubahan Katalog Produk?")
+            cy, cn = st.columns(2)
+            if cy.button("✅ Ya, Simpan"):
+                conn.update(worksheet="Master_Produk", data=df_produk_edit)
+                st.session_state['konfirmasi_simpan_prod'] = False
+                st.cache_data.clear(); st.rerun()
+            if cn.button("❌ Batal"):
+                st.session_state['konfirmasi_simpan_prod'] = False
+                st.rerun()
+
         st.divider()
         st.markdown("#### ✏️ Tabel Master Data (Edit & Hapus)")
         df_produk_edit = st.data_editor(df_produk, use_container_width=True, num_rows="dynamic", key="editor_produk")
