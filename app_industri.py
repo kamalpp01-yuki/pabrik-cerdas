@@ -92,34 +92,37 @@ st.markdown("""
         }
     }
  /* ========================================================= */
-    /* 6. SULAP TAB JADI MINIMALIS NEON (FUTURISTIK)             */
+    /* 6. SULAP TAB JADI KARTU TIMBUL (MODERN ADMIN DASHBOARD)   */
     /* ========================================================= */
     button[data-baseweb="tab"] {
         background-color: transparent !important;
-        border: none !important;
-        border-bottom: 3px solid transparent !important;
-        border-radius: 0px !important;
-        padding: 10px 15px !important;
-        margin-right: 15px !important;
+        border: 1px solid transparent !important;
+        border-radius: 8px !important;
+        padding: 10px 20px !important;
+        margin-right: 5px !important;
         color: #6C727F !important;
-        font-weight: 800 !important;
-        font-size: 16px !important;
-        text-transform: uppercase !important; /* Huruf kapital semua */
-        letter-spacing: 1px !important;
+        font-weight: 600 !important;
+        font-size: 15px !important;
         transition: all 0.3s ease !important;
     }
 
+    /* Saat mouse cuma lewat (Hover) */
     button[data-baseweb="tab"]:hover {
+        background-color: rgba(255, 255, 255, 0.03) !important;
         color: #EEEEEE !important;
     }
 
+    /* Saat Tab Aktif / Terpilih */
     button[data-baseweb="tab"][aria-selected="true"] {
-        color: #00ADB5 !important;
-        border-bottom: 3px solid #00ADB5 !important; /* Garis bawah neon */
-        text-shadow: 0px 0px 12px rgba(0, 173, 181, 0.6) !important; /* Efek teks bercahaya */
+        background-color: #1E1E24 !important; /* Sama dengan warna kotak metrik */
+        border: 1px solid #393E46 !important;
+        border-bottom: 3px solid #00ADB5 !important; /* Aksen tosca di bawah */
+        color: #FFFFFF !important;
+        box-shadow: 0px 5px 15px rgba(0,0,0,0.4) !important; /* Bayangan halus */
+        transform: translateY(-3px); /* Efek terangkat */
     }
 
-    /* Hilangkan garis biru bawaan */
+    /* Menghilangkan garis biru bawaan Streamlit */
     div[data-baseweb="tab-highlight"] {
         display: none !important;
     }
