@@ -148,7 +148,7 @@ def jalankan(df_pem, df_produk, conn):
                         <div class="header">
                             <h1>INVOICE</h1>
                             <div class="info-toko">
-                                <strong>Pabrik Konveksi Topi Cerdas</strong><br>
+                                <strong>Pabrik Konveksi Topi</strong><br>
                                 Jl. Industri Raya No. 1, Bandung<br>
                                 Telp: 0812-3456-7890
                             </div>
