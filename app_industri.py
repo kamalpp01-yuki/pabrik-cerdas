@@ -92,34 +92,32 @@ st.markdown("""
         }
     }
  /* ========================================================= */
-    /* 6. SULAP TAB JADI KARTU TIMBUL (MODERN ADMIN DASHBOARD)   */
+    /* 6. SULAP TAB JADI GARIS NEON EDGE (TECH STYLE)            */
     /* ========================================================= */
     button[data-baseweb="tab"] {
         background-color: transparent !important;
-        border: 1px solid transparent !important;
-        border-radius: 8px !important;
-        padding: 10px 20px !important;
-        margin-right: 5px !important;
-        color: #6C727F !important;
-        font-weight: 600 !important;
-        font-size: 15px !important;
+        border: 2px solid #393E46 !important; /* Garis pinggir abu-abu */
+        border-radius: 6px !important;
+        padding: 8px 22px !important;
+        margin-right: 10px !important;
+        color: #8A8D93 !important;
+        font-weight: bold !important;
+        font-size: 14px !important;
         transition: all 0.3s ease !important;
     }
 
     /* Saat mouse cuma lewat (Hover) */
     button[data-baseweb="tab"]:hover {
-        background-color: rgba(255, 255, 255, 0.03) !important;
-        color: #EEEEEE !important;
+        border-color: rgba(0, 173, 181, 0.5) !important;
+        color: #00ADB5 !important;
     }
 
     /* Saat Tab Aktif / Terpilih */
     button[data-baseweb="tab"][aria-selected="true"] {
-        background-color: #1E1E24 !important; /* Sama dengan warna kotak metrik */
-        border: 1px solid #393E46 !important;
-        border-bottom: 3px solid #00ADB5 !important; /* Aksen tosca di bawah */
-        color: #FFFFFF !important;
-        box-shadow: 0px 5px 15px rgba(0,0,0,0.4) !important; /* Bayangan halus */
-        transform: translateY(-3px); /* Efek terangkat */
+        background-color: rgba(0, 173, 181, 0.1) !important; /* Isi transparan cyan */
+        border-color: #00ADB5 !important; /* Garis pinggir cyan full */
+        color: #00ADB5 !important;
+        box-shadow: 0px 0px 10px rgba(0, 173, 181, 0.3) !important; /* Glow tipis */
     }
 
     /* Menghilangkan garis biru bawaan Streamlit */
