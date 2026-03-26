@@ -6,7 +6,7 @@ import os
 def jalankan(df_pem, df_bahan, conn):
     st.markdown("## 📦 Modul Gudang & Distribusi Terpadu")
     
-    # --- PENGELOMPOKAN DATA BERDASARKAN STATUS ---
+    # --- PENGELOMPOKAN DATA BERDASARKAN STATUS ---d
     df_siap_kirim = df_pem[df_pem['Status Validasi'] == 'Selesai & Masuk Gudang'].copy()
     df_sedang_dikirim = df_pem[df_pem['Status Validasi'] == 'Pesanan Dikirim'].copy()
     
