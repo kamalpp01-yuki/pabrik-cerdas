@@ -5,10 +5,9 @@ from datetime import datetime
 
 # --- IMPORT SEMUA MODUL ---
 import modul_login
-# Nanti modul lain di-import di dalam masing-menu biar loadingnya cepat!
 
 # --- 1. PENGATURAN HALAMAN & SESSION STATE ---
-st.set_page_config(page_title="ERP Konveksi Topi", page_icon="", layout="wide")
+st.set_page_config(page_title="ERP Konveksi Topi", page_icon="🎩", layout="wide")
 
 # Inisialisasi Kunci Pintu (Session State)
 if "is_logged_in" not in st.session_state:
@@ -35,15 +34,13 @@ st.markdown("""
     }
    
     /* 2. Merombak Total Navigasi Sidebar jadi Menu Tombol Premium ✨ */
-    /* Menyembunyikan lingkaran radio button bawaan */
     div[data-testid="stSidebar"] div[role="radiogroup"] > label > div:first-child {
         display: none !important; 
     }
     
-    /* Membuat label teks menjadi kotak menu interaktif */
     div[data-testid="stSidebar"] div[role="radiogroup"] > label {
-        background-color: rgba(255, 255, 255, 0.05); /* Sedikit card-like transparan */
-        border: 1px solid rgba(0, 173, 181, 0.3); /* Garis accent warna cyan */
+        background-color: rgba(255, 255, 255, 0.05); 
+        border: 1px solid rgba(0, 173, 181, 0.3); 
         padding: 12px 18px !important;
         border-radius: 8px !important;
         margin-bottom: 8px !important;
@@ -53,18 +50,16 @@ st.markdown("""
         color: #EEEEEE !important;
     }
     
-    /* Efek saat mouse mengarah (Hover) */
     div[data-testid="stSidebar"] div[role="radiogroup"] > label:hover {
         background-color: rgba(0, 173, 181, 0.1) !important;
         border-color: #00ADB5 !important;
-        transform: scale(1.02) translateX(3px); /* Sedikit membesar & geser kanan */
+        transform: scale(1.02) translateX(3px); 
     }
     
-    /* Efek saat Modul terpilih / aktif (Selected) */
     div[data-testid="stSidebar"] div[role="radiogroup"] > label[data-checked="true"] {
         background: linear-gradient(135deg, #00ADB5 0%, #17a2b8 100%) !important;
         color: white !important;
-        box-shadow: 0px 4px 10px rgba(0, 173, 181, 0.5) !important; /* Cahaya glowing */
+        box-shadow: 0px 4px 10px rgba(0, 173, 181, 0.5) !important; 
         border: none !important;
     }
 
@@ -78,7 +73,7 @@ st.markdown("""
         transform: scale(1.03);
     }
     
-    /* 4. Ngilangin menu bawaan Streamlit d*/
+    /* 4. Ngilangin menu bawaan Streamlit */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 
@@ -101,13 +96,15 @@ st.markdown("""
             padding-bottom: 2rem !important;
         }
     }
- /* ========================================================= */
-    /* 6. SULAP TAB JADI GOOGLE MATERIAL (CLEAN & SIMPLE)        */
+
     /* ========================================================= */
-    button[data-baseweb="tab"] {
+    /* 6. SULAP TAB JADI GOOGLE MATERIAL (ANTI-GAGAL) ✨         */
+    /* ========================================================= */
+    /* Pakai TestID biar nembus semua versi Streamlit! */
+    div[data-testid="stTabs"] button[role="tab"] {
         background-color: transparent !important;
         border: none !important;
-        border-bottom: 4px solid transparent !important; /* Disiapkan tempat buat garis */
+        border-bottom: 4px solid transparent !important; 
         border-radius: 4px 4px 0 0 !important;
         padding: 12px 20px !important;
         margin-right: 5px !important;
@@ -118,20 +115,20 @@ st.markdown("""
     }
 
     /* Saat mouse lewat */
-    button[data-baseweb="tab"]:hover {
+    div[data-testid="stTabs"] button[role="tab"]:hover {
         color: #EEEEEE !important;
         background-color: rgba(255, 255, 255, 0.03) !important;
     }
 
     /* Saat Tab Aktif */
-    button[data-baseweb="tab"][aria-selected="true"] {
-        color: #00ADB5 !important; /* Teks berubah tosca */
-        border-bottom: 4px solid #00ADB5 !important; /* Muncul garis tosca tebal */
-        background-color: rgba(0, 173, 181, 0.05) !important; /* Background tosca super pudar */
+    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+        color: #00ADB5 !important; 
+        border-bottom: 4px solid #00ADB5 !important; 
+        background-color: rgba(0, 173, 181, 0.05) !important; 
     }
 
     /* Hilangkan garis biru tipis bawaan Streamlit */
-    div[data-baseweb="tab-highlight"] {
+    div[data-testid="stTabs"] div[data-baseweb="tab-highlight"] {
         display: none !important;
     }
 </style>
@@ -154,7 +151,8 @@ def main_app():
     st.sidebar.title("🧭 Navigasi ERP Topi")
     
     # Sapaan personal
-    st.sidebar.markdown(f"👤 Selamat bekerja, **{st.session_state['current_user'].capitalize()}**!")
+    user_aktif = st.session_state.get('current_user', 'Admin')
+    st.sidebar.markdown(f"👤 Selamat bekerja, **{user_aktif.capitalize()}**!")
     st.sidebar.markdown("<br>", unsafe_allow_html=True)
     
     # MENU BARU YANG LEBIH RAPI
@@ -272,9 +270,7 @@ def main_app():
             import modul_gudang
             modul_gudang.jalankan(df_pem, df_bahan, conn)
 
-
 # --- 4. SAKLAR UTAMA (THE GATEKEEPER) ---
-# Jika belum login, panggil modul login. Jika sudah, buka aplikasi utama.
 if not st.session_state["is_logged_in"]:
     modul_login.tampilkan_login()
 else:
