@@ -27,7 +27,7 @@ def jalankan(df_pem, df_produk, df_bahan, conn):
     # ==========================================
     with tab1:
         if df_produk.empty:
-            st.warning("⚠️ Katalog Produk masih kosong! Silakan tambah produk di Tab 'Master Data Produk' terlebih dahulu.")
+            st.warning("⚠️ Katalog Produk masih kosong! Silakan tambah produk di Tab 'Master Data & BOM' terlebih dahulu.")
         else:
             st.markdown("### ➕ Buat Pesanan Baru")
             col_kiri, col_kanan = st.columns(2)
@@ -107,7 +107,6 @@ def jalankan(df_pem, df_produk, df_bahan, conn):
                             df_prod_sync = df_prod_sync[~df_prod_sync['ID Order'].isin(pesanan_dihapus)]
 
                         if not df_uang_sync.empty and 'Keterangan' in df_uang_sync.columns:
-                            # Hapus transaksi keuangan yang keterangannya mengandung ID Order yang dihapus
                             mask = df_uang_sync['Keterangan'].apply(lambda x: any(d_id in str(x) for d_id in pesanan_dihapus))
                             df_uang_sync = df_uang_sync[~mask]
                             conn.update(worksheet="Keuangan", data=df_uang_sync)
@@ -184,29 +183,11 @@ def jalankan(df_pem, df_produk, df_bahan, conn):
                         st.cache_data.clear(); st.rerun()
         
         st.divider()
-        st.markdown("#### ✏️ Tabel Master Data")
+        st.markdown("#### ✏️ Tabel Master Data (Edit & Hapus)")
         st.info("💡 Kolom BOM berisi format resep. Lebih aman menghapus baris dan membuat baru daripada mengedit teks BOM secara manual.")
         df_produk_edit = st.data_editor(df_produk, use_container_width=True, num_rows="dynamic", key="editor_produk")
         
-        if st.button("💾 Simpan Perubahan Katalog", type="primary"):
-            st.session_state['konfirmasi_simpan_prod'] = True
-            
-        if st.session_state.get('konfirmasi_simpan_prod', False):
-            st.warning("Yakin simpan perubahan Katalog Produk?")
-            cy, cn = st.columns(2)
-            if cy.button("✅ Ya, Simpan"):
-                conn.update(worksheet="Master_Produk", data=df_produk_edit)
-                st.session_state['konfirmasi_simpan_prod'] = False
-                st.cache_data.clear(); st.rerun()
-            if cn.button("❌ Batal"):
-                st.session_state['konfirmasi_simpan_prod'] = False
-                st.rerun()
-
-        st.divider()
-        st.markdown("#### ✏️ Tabel Master Data (Edit & Hapus)")
-        df_produk_edit = st.data_editor(df_produk, use_container_width=True, num_rows="dynamic", key="editor_produk")
-        
-        # Validasi juga untuk Master Produk
+        # Validasi untuk Master Produk
         if st.button("💾 Simpan Perubahan Katalog", type="primary"):
             st.session_state['konfirmasi_simpan_prod'] = True
             
