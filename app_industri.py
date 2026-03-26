@@ -285,28 +285,30 @@ def main_app():
             import modul_produksi
             modul_produksi.jalankan(df_pem, df_prod, df_bahan, df_jadi, df_produk, conn)
             
-    # ==========================================
-    # MODUL 4: GUDANG (INVENTORY) - VERSI ANTI-ERROR
+# ==========================================
+    # MODUL 4: GUDANG (INVENTORY)
     # ==========================================
     elif menu == "📦 Gudang (Inventory)":
-        st.header("ERP Gudang Terpadu")
+        st.header("📦 ERP Gudang Terpadu")
         
-        try:
-            # Baca semua kolom di tab Bahan_Baku
-            df_bahan = conn.read(worksheet="Bahan_Baku")
-            df_bahan = df_bahan.dropna(how="all") # Hapus baris kosong
+        with st.spinner("⏳ Memuat data Gudang & Pesanan Siap Kirim..."):
+            # Sedot data Pemasaran untuk tahu pesanan klien yang ada di gudang
+            kolom_pem = ["ID Order", "Tanggal", "Nama Klien", "Model Topi", "Jumlah (Pcs)", "Total Harga", "File Desain", "Status Validasi"]
+            try: 
+                df_pem = get_data("Pemasaran", [0,1,2,3,4,5,6,7], kolom_pem)
+            except Exception: 
+                df_pem = pd.DataFrame(columns=kolom_pem)
             
-            # Baca semua kolom di tab Barang_Jadi
-            df_jadi = conn.read(worksheet="Barang_Jadi")
-            df_jadi = df_jadi.dropna(how="all") # Hapus baris kosong
+            # Sedot data Bahan Baku
+            kolom_bahan = ["Nama Bahan", "Stok", "Satuan", "Max Kapasitas"]
+            try: 
+                df_bahan = get_data("Bahan_Baku", [0,1,2,3], kolom_bahan)
+            except Exception: 
+                df_bahan = pd.DataFrame(columns=kolom_bahan)
             
             import modul_gudang
-            modul_gudang.jalankan(df_bahan, df_jadi, conn)
-            
-        except Exception as e:
-            st.error(f"🚨 Gagal terhubung ke Google Sheets: {e}")
-            st.info("Pastikan nama Tab di Google Sheets adalah 'Bahan_Baku' dan 'Barang_Jadi'")
-
+            # Kita cuma kirim df_pem dan df_bahan sekarang!
+            modul_gudang.jalankan(df_pem, df_bahan, conn)
 # --- 4. SAKLAR UTAMA ---
 if not st.session_state.logged_in:
     login_screen()
