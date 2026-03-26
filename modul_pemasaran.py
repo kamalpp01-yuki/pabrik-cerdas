@@ -4,12 +4,10 @@ from datetime import datetime
 import os
 
 def jalankan(df_pem, df_produk, conn):
-    # (Judul double sudah dihapus dari sini)
-    
     # --- SISTEM NOTIFIKASI SETELAH RESET FORM ---
     if st.session_state.get('notif_sukses'):
         st.success(st.session_state['notif_sukses'])
-        st.session_state['notif_sukses'] = "" # Kosongkan lagi setelah ditampilkan
+        st.session_state['notif_sukses'] = ""
 
     # --- MINI DASHBOARD PEMASARAN ---
     total_order = len(df_pem)
@@ -22,7 +20,6 @@ def jalankan(df_pem, df_produk, conn):
     c3.metric("📦 Master Data Produk", f"{total_produk} Varian Topi")
     st.divider()
 
-    # --- 3 TAB TERPISAH ---
     tab1, tab2, tab3 = st.tabs(["📝 Form Pesanan Baru", "📋 Database Pesanan", "🗄️ Master Data & BOM"])
 
     # ==========================================
@@ -33,11 +30,9 @@ def jalankan(df_pem, df_produk, conn):
             st.warning("⚠️ Katalog Produk masih kosong! Silakan tambah produk di Tab 'Master Data Produk' terlebih dahulu.")
         else:
             st.markdown("### ➕ Buat Pesanan Baru")
-            
             col_kiri, col_kanan = st.columns(2)
             
             with col_kiri:
-                # KITA KASIH "key" DI SETIAP INPUT BIAR BISA DI-RESET NANTI
                 nama_klien = st.text_input("Nama Klien / Instansi", placeholder="Misal: PT Maju Jaya", key="in_nama")
                 daftar_topi = df_produk["Model Topi"].tolist()
                 model_topi = st.selectbox("Pilih Model Topi", daftar_topi, key="in_model")
@@ -45,8 +40,6 @@ def jalankan(df_pem, df_produk, conn):
                 
             with col_kanan:
                 file_desain = st.file_uploader("Upload Desain Topi (JPG/PNG)", type=["jpg", "png"], key="in_file")
-                
-                # Logika Auto-Pricing Live
                 harga_satuan = df_produk.loc[df_produk['Model Topi'] == model_topi, 'Harga Satuan (Rp)'].values[0]
                 total_harga_otomatis = float(harga_satuan) * jumlah
                 st.info(f"💡 **Info Harga:** Rp {float(harga_satuan):,.0f} / Pcs")
@@ -54,8 +47,7 @@ def jalankan(df_pem, df_produk, conn):
 
             st.markdown("<br>", unsafe_allow_html=True)
             if st.button("💾 Simpan & Teruskan ke Keuangan", use_container_width=True):
-                if nama_klien == "":
-                    st.error("⚠️ Nama Klien harus diisi!")
+                if nama_klien == "": st.error("⚠️ Nama Klien harus diisi!")
                 else:
                     with st.spinner("🚀 Sedang menyimpan pesanan..."):
                         id_order = f"ORD-{datetime.now().strftime('%Y%m%d%H%M%S')}"
@@ -67,55 +59,87 @@ def jalankan(df_pem, df_produk, conn):
                             with open(os.path.join("desain_topi", nama_file_simpan), "wb") as f:
                                 f.write(file_desain.getbuffer())
 
-                        data_baru = pd.DataFrame([{
-                            "ID Order": id_order, "Tanggal": datetime.now().strftime("%Y-%m-%d"), 
-                            "Nama Klien": nama_klien, "Model Topi": model_topi, "Jumlah (Pcs)": jumlah, 
-                            "Total Harga": total_harga_otomatis, "File Desain": nama_file_simpan, 
-                            "Status Validasi": "Menunggu Pembayaran"
-                        }])
+                        data_baru = pd.DataFrame([{"ID Order": id_order, "Tanggal": datetime.now().strftime("%Y-%m-%d"), "Nama Klien": nama_klien, "Model Topi": model_topi, "Jumlah (Pcs)": jumlah, "Total Harga": total_harga_otomatis, "File Desain": nama_file_simpan, "Status Validasi": "Menunggu Pembayaran"}])
                         conn.update(worksheet="Pemasaran", data=pd.concat([df_pem, data_baru], ignore_index=True))
                         st.cache_data.clear()
                         
-                        # --- JURUS RESET FORM ---
-                        # Kita hapus memori inputan ini dari server sebelum halaman refresh
                         for key in ['in_nama', 'in_model', 'in_jumlah', 'in_file']:
-                            if key in st.session_state:
-                                del st.session_state[key]
+                            if key in st.session_state: del st.session_state[key]
                         
-                        # Simpan pesan sukses di memori biar ditampilin pas halamannya loading ulang
                         st.session_state['notif_sukses'] = f"✅ Pesanan dari {nama_klien} berhasil disimpan & form telah di-reset!"
                         st.rerun()
 
     # ==========================================
-    # TAB 2: DATABASE PEMASARAN (BISA EDIT & HAPUS)
+    # TAB 2: DATABASE PEMASARAN (EFEK DOMINO)
     # ==========================================
     with tab2:
         st.markdown("### 📋 Seluruh Data Pesanan Masuk")
-        st.info("💡 **Tips Edit & Hapus:** Klik dua kali pada sel tabel untuk mengubah data. Untuk menghapus baris, klik kotak abu-abu di ujung paling kiri barisnya, lalu tekan tombol `Delete` di keyboard.")
+        st.info("💡 **Tips Anti-Panik:** Jika Anda salah menghapus baris, cukup klik di dalam tabel lalu tekan `Ctrl + Z` di keyboard untuk mengembalikannya (Undo).")
         
-        # Mengganti st.dataframe menjadi st.data_editor
-        df_pem_edit = st.data_editor(
-            df_pem, 
-            use_container_width=True, 
-            num_rows="dynamic", # Kunci sakti biar bisa nambah/hapus baris
-            key="editor_pemasaran"
-        )
+        df_pem_edit = st.data_editor(df_pem, use_container_width=True, num_rows="dynamic", key="editor_pemasaran")
         
+        # 1. Tombol Awal (Memicu Peringatan)
         if st.button("💾 Simpan Perubahan Database", type="primary"):
-            with st.spinner("Memperbarui database..."):
-                conn.update(worksheet="Pemasaran", data=df_pem_edit)
-                st.cache_data.clear()
-                st.success("✅ Perubahan database berhasil disimpan ke Google Sheets!")
+            st.session_state['konfirmasi_simpan_pem'] = True
+
+        # 2. Logika Validasi Ya/Tidak & Efek Domino
+        if st.session_state.get('konfirmasi_simpan_pem', False):
+            st.warning("⚠️ **KONFIRMASI PENTING:** Anda yakin ingin menyimpan? Jika ada pesanan yang dihapus atau diubah di sini, data terkait di **Produksi** dan uang di **Keuangan** juga akan ikut terhapus/berubah secara otomatis!")
+            
+            col_y, col_n = st.columns(2)
+            if col_y.button("✅ Ya, Simpan & Sinkronkan Semua Divisi"):
+                with st.spinner("🔄 Sedang menyinkronkan data Pemasaran, Produksi, dan Keuangan..."):
+                    # Deteksi pesanan yang dihapus
+                    pesanan_lama = set(df_pem['ID Order'])
+                    pesanan_baru = set(df_pem_edit['ID Order'])
+                    pesanan_dihapus = pesanan_lama - pesanan_baru
+
+                    # Sedot data Keuangan & Produksi
+                    try: df_prod_sync = conn.read(worksheet="Produksi").dropna(how="all")
+                    except: df_prod_sync = pd.DataFrame()
+
+                    try: df_uang_sync = conn.read(worksheet="Keuangan").dropna(how="all")
+                    except: df_uang_sync = pd.DataFrame()
+
+                    # CASCADING DELETE (Menghapus efek domino)
+                    if pesanan_dihapus:
+                        if not df_prod_sync.empty and 'ID Order' in df_prod_sync.columns:
+                            df_prod_sync = df_prod_sync[~df_prod_sync['ID Order'].isin(pesanan_dihapus)]
+
+                        if not df_uang_sync.empty and 'Keterangan' in df_uang_sync.columns:
+                            # Hapus transaksi keuangan yang keterangannya mengandung ID Order yang dihapus
+                            mask = df_uang_sync['Keterangan'].apply(lambda x: any(d_id in str(x) for d_id in pesanan_dihapus))
+                            df_uang_sync = df_uang_sync[~mask]
+                            conn.update(worksheet="Keuangan", data=df_uang_sync)
+
+                    # CASCADING UPDATE (Mengupdate Produksi jika model/jumlah diubah)
+                    if not df_prod_sync.empty and 'ID Order' in df_prod_sync.columns:
+                        model_map = dict(zip(df_pem_edit['ID Order'], df_pem_edit['Model Topi']))
+                        jumlah_map = dict(zip(df_pem_edit['ID Order'], df_pem_edit['Jumlah (Pcs)']))
+                        
+                        df_prod_sync['Model Topi'] = df_prod_sync['ID Order'].map(model_map).fillna(df_prod_sync['Model Topi'])
+                        df_prod_sync['Jumlah (Pcs)'] = df_prod_sync['ID Order'].map(jumlah_map).fillna(df_prod_sync['Jumlah (Pcs)'])
+                        conn.update(worksheet="Produksi", data=df_prod_sync)
+
+                    # Simpan hasil akhir
+                    conn.update(worksheet="Pemasaran", data=df_pem_edit)
+                    
+                    st.session_state['konfirmasi_simpan_pem'] = False
+                    st.cache_data.clear()
+                    st.success("✅ Perubahan tersimpan dan seluruh divisi telah disinkronkan!")
+                    st.rerun()
+
+            if col_n.button("❌ Batal"):
+                st.session_state['konfirmasi_simpan_pem'] = False
                 st.rerun()
 
     # ==========================================
-    # TAB 3: MASTER DATA PRODUK (BISA EDIT & HAPUS)
+    # TAB 3: MASTER DATA PRODUK
     # ==========================================
     with tab3:
         st.markdown("### 🗄️ Katalog Produk & Bill of Materials (BOM)")
         
         with st.form("form_tambah_produk", clear_on_submit=True):
-            st.write("Tambah model topi baru di sini:")
             c1, c2, c3 = st.columns(3)
             with c1:
                 nama_topi = st.text_input("Nama Varian Topi")
@@ -129,8 +153,7 @@ def jalankan(df_pem, df_produk, conn):
                 submit_produk = st.form_submit_button("➕ Tambah Produk", use_container_width=True)
 
             if submit_produk:
-                if nama_topi == "" or harga_jual <= 0:
-                    st.error("Nama Topi dan Harga wajib diisi!")
+                if nama_topi == "" or harga_jual <= 0: st.error("Nama Topi dan Harga wajib diisi!")
                 else:
                     with st.spinner("Menyimpan produk..."):
                         data_produk_baru = pd.DataFrame([{"Model Topi": nama_topi, "Kain (m2)": kebutuhan_kain, "Benang (Roll)": kebutuhan_benang, "Pengait (Pcs)": kebutuhan_pengait, "Harga Satuan (Rp)": harga_jual}])
@@ -139,15 +162,22 @@ def jalankan(df_pem, df_produk, conn):
         
         st.divider()
         st.markdown("#### ✏️ Tabel Master Data (Edit & Hapus)")
-        df_produk_edit = st.data_editor(
-            df_produk, 
-            use_container_width=True, 
-            num_rows="dynamic", # Kunci sakti hapus baris
-            key="editor_produk"
-        )
+        df_produk_edit = st.data_editor(df_produk, use_container_width=True, num_rows="dynamic", key="editor_produk")
+        
+        # Validasi juga untuk Master Produk
         if st.button("💾 Simpan Perubahan Katalog", type="primary"):
-            with st.spinner("Menyimpan..."):
-                conn.update(worksheet="Master_Produk", data=df_produk_edit)
-                st.cache_data.clear()
-                st.success("✅ Katalog Master Produk berhasil diperbarui!")
+            st.session_state['konfirmasi_simpan_prod'] = True
+            
+        if st.session_state.get('konfirmasi_simpan_prod', False):
+            st.warning("Apakah Anda yakin ingin menyimpan perubahan Katalog Produk?")
+            cy, cn = st.columns(2)
+            if cy.button("✅ Ya, Simpan Katalog"):
+                with st.spinner("Menyimpan..."):
+                    conn.update(worksheet="Master_Produk", data=df_produk_edit)
+                    st.session_state['konfirmasi_simpan_prod'] = False
+                    st.cache_data.clear()
+                    st.success("✅ Katalog berhasil diperbarui!")
+                    st.rerun()
+            if cn.button("❌ Batal Simpan"):
+                st.session_state['konfirmasi_simpan_prod'] = False
                 st.rerun()
