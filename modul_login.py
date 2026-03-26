@@ -91,7 +91,7 @@ def tampilkan_login():
         # Form Login
         with st.form("form_login_erp"):
             # Judul sekarang dimasukkan ke DALAM form
-            st.markdown("<div class='login-title'>🎩 ERP Konveksi</div>", unsafe_allow_html=True)
+            st.markdown("<div class='login-title'>ERP Konveksi</div>", unsafe_allow_html=True)
             st.markdown("<div class='login-subtitle'>SISTEM PERENCANAAN SUMBER DAYA CERDAS</div>", unsafe_allow_html=True)
             
             user = st.text_input("Username", placeholder="Masukkan Username Admin")
@@ -112,4 +112,4 @@ def tampilkan_login():
             else:
                 st.error("❌ Username atau Password salah!")
         
-        st.markdown("<p style='text-align:center;color:#555;font-size:12px;margin-top:15px;'>Level Pro - v2.1 | Powered by Streamlit</p>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align:center;color:#555;font-size:12px;margin-top:15px;'>Aplikasi ERP - v2.1", unsafe_allow_html=True)

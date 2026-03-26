@@ -8,7 +8,7 @@ import modul_login
 # Nanti modul lain di-import di dalam masing-menu biar loadingnya cepat!
 
 # --- 1. PENGATURAN HALAMAN & SESSION STATE ---
-st.set_page_config(page_title="ERP Konveksi Topi", page_icon="🎩", layout="wide")
+st.set_page_config(page_title="ERP Konveksi Topi", page_icon="", layout="wide")
 
 # Inisialisasi Kunci Pintu (Session State)
 if "is_logged_in" not in st.session_state:
