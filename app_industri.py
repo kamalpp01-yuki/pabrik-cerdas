@@ -10,46 +10,31 @@ import modul_pemasaran
 # --- 1. PENGATURAN HALAMAN & LOGIN ---
 st.set_page_config(page_title="ERP Konveksi Topi", layout="wide")
 
-# --- SUNTIKAN CUSTOM CSS (LEVEL 4 UI) ---
+# --- SUNTIKAN CUSTOM CSS (LEVEL 4 UI + MOBILE FRIENDLY) ---
 st.markdown("""
 <style>
     /* 1. Efek Kartu (Card) untuk Papan Skor / Metric */
     div[data-testid="stMetric"] {
-        background-color: #1E1E24; /* Warna gelap elegan */
-        border-left: 5px solid #00ADB5; /* Garis aksen biru elektrik */
+        background-color: #1E1E24;
+        border-left: 5px solid #00ADB5;
         padding: 15px 20px;
         border-radius: 10px;
-        box-shadow: 2px 4px 10px rgba(0,0,0,0.4); /* Bayangan gelap */
-        transition: transform 0.3s ease, box-shadow 0.3s ease; /* Animasi mulus */
+        box-shadow: 2px 4px 10px rgba(0,0,0,0.4);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
     
-    /* 2. Efek Melayang (Hover) saat disorot mouse */
     div[data-testid="stMetric"]:hover {
-        transform: translateY(-5px); /* Ngangkat ke atas sedikit */
-        box-shadow: 4px 8px 15px rgba(0, 173, 181, 0.3); /* Bayangan biru menyala */
+        transform: translateY(-5px);
+        box-shadow: 4px 8px 15px rgba(0, 173, 181, 0.3);
     }
 
-    /* 3. Efek Tombol (Button) yang lebih modern */
-    div[data-testid="stButton"] button {
-        border-radius: 8px;
-        font-weight: bold;
-        transition: all 0.2s ease-in-out;
-    }
-    div[data-testid="stButton"] button:hover {
-        transform: scale(1.03); /* Tombol membesar dikit pas disorot */
-    }
-    
-    /* 4. Ngilangin menu hamburger default Streamlit (Biar kaya web beneran) */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-            
-    /* 5. Merombak Radio Button Sidebar menjadi Menu Tombol Elegan */
+    /* 2. Merombak Radio Button Sidebar menjadi Menu Tombol Elegan */
     div[data-testid="stSidebar"] div[role="radiogroup"] > label > div:first-child {
-        display: none; /* Sembunyikan bulatan radio kuno */
+        display: none; 
     }
     div[data-testid="stSidebar"] div[role="radiogroup"] > label {
         background-color: transparent;
-        border: 1px solid #00ADB5; /* Garis pinggir biru */
+        border: 1px solid #00ADB5;
         padding: 12px 20px;
         border-radius: 8px;
         margin-bottom: 8px;
@@ -57,15 +42,55 @@ st.markdown("""
         transition: all 0.3s ease;
     }
     div[data-testid="stSidebar"] div[role="radiogroup"] > label:hover {
-        background-color: rgba(0, 173, 181, 0.2); /* Nyala dikit pas disorot */
-        transform: translateX(5px); /* Geser kanan dikit */
+        background-color: rgba(0, 173, 181, 0.2);
+        transform: translateX(5px);
     }
-    /* Warna menu saat sedang dipilih (Aktif) */
     div[data-testid="stSidebar"] div[role="radiogroup"] > label[data-checked="true"] {
         background-color: #00ADB5;
         color: white !important;
         box-shadow: 0px 4px 10px rgba(0, 173, 181, 0.5);
         border: none;
+    }
+
+    /* 3. Efek Tombol (Button) */
+    div[data-testid="stButton"] button {
+        border-radius: 8px;
+        font-weight: bold;
+        transition: all 0.2s ease-in-out;
+    }
+    div[data-testid="stButton"] button:hover {
+        transform: scale(1.03);
+    }
+    
+    /* 4. Ngilangin menu bawaan Streamlit */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+
+    /* ========================================================= */
+    /* 5. SIHIR MOBILE FRIENDLY (DETEKSI LAYAR HP MAX 768px) 📱  */
+    /* ========================================================= */
+    @media (max-width: 768px) {
+        /* Bikin kartu metrik lebih langsing dan nggak bengkak */
+        div[data-testid="stMetric"] {
+            padding: 8px 12px !important;
+            margin-bottom: -10px !important; /* Ngurangin jarak antar kartu */
+        }
+        
+        /* Perkecil font angka di dalam kartu */
+        div[data-testid="stMetricValue"] > div {
+            font-size: 1.4rem !important; 
+        }
+        
+        /* Perkecil font judul kartu */
+        div[data-testid="stMetricLabel"] > div {
+            font-size: 0.85rem !important;
+        }
+
+        /* Kurangi ruang kosong di bagian atas layar HP */
+        .block-container {
+            padding-top: 2rem !important;
+            padding-bottom: 2rem !important;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -199,7 +224,7 @@ def main_app():
     # MODUL 1: PEMASARAN
     # ==========================================
     elif menu == "🤝 Pemasaran (Sales)":
-        st.header("🤝 Modul Pemasaran & Order")
+        st.header("ERP Pemasaran & Order")
         kolom_pemasaran = ["ID Order", "Tanggal", "Nama Klien", "Model Topi", "Jumlah (Pcs)", "Total Harga", "File Desain", "Status Validasi"]
         df_pemasaran = get_data("Pemasaran", [0,1,2,3,4,5,6,7], kolom_pemasaran)
         modul_pemasaran.jalankan(df_pemasaran, conn)
@@ -208,7 +233,7 @@ def main_app():
     # MODUL 2: KEUANGAN (VALIDATOR)
     # ==========================================
     elif menu == "💰 Keuangan (Validator)":
-        st.header("💰 Modul Keuangan & Validasi")
+        st.header("ERP Keuangan & Validasi")
         
         # Ambil data dari 2 Tab berbeda (Keuangan & Pemasaran)
         kolom_uang = ["Tanggal", "Keterangan", "Pemasukan (Rp)", "Pengeluaran (Rp)"]
@@ -225,7 +250,7 @@ def main_app():
     # MODUL 3: PRODUKSI (PPIC & QC)
     # ==========================================
     elif menu == "🏭 Produksi (PPIC & QC)":
-        st.header("🏭 Modul Produksi & Quality Control")
+        st.header("ERP Produksi & Quality Control")
         
         # Insinyur sejati memanggil 4 tabel sekaligus!
         kolom_pem = ["ID Order", "Tanggal", "Nama Klien", "Model Topi", "Jumlah (Pcs)", "Total Harga", "File Desain", "Status Validasi"]
@@ -247,7 +272,7 @@ def main_app():
     # MODUL 4: GUDANG (INVENTORY) - VERSI ANTI-ERROR
     # ==========================================
     elif menu == "📦 Gudang (Inventory)":
-        st.header("📦 Modul Gudang Terpadu")
+        st.header("ERP Gudang Terpadu")
         
         try:
             # Baca semua kolom di tab Bahan_Baku

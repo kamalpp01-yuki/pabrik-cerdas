@@ -51,4 +51,6 @@ def jalankan(df_uang, df_pem, conn):
                     conn.update(worksheet="Keuangan", data=pd.concat([df_uang, data_keluar], ignore_index=True))
                     st.cache_data.clear(); st.success("Tercatat!"); st.rerun()
                 else:
-                    st.error("Isi data dengan benar!")
+                    # --- TAMBAHKAN SPINNER DI SINI ---
+                    with st.spinner("🚀 Sedang  menyimpan data ..."):
+                        st.error("Isi data dengan benar!")
