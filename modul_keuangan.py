@@ -53,12 +53,28 @@ def jalankan(df_uang, df_pemasaran, conn):
                     with col_btn:
                         st.markdown("<br>", unsafe_allow_html=True)
                         if st.button("✅ Validasi Uang Masuk", key=f"val_{idx}", use_container_width=True, type="primary"):
-                            with st.spinner("Memvalidasi dana..."):
-                                # Ubah status di dataframe utama
+                            with st.spinner("Memvalidasi dana dan meneruskan ke Produksi..."):
+                                # 1. Ubah status Keuangan jadi Valid
                                 df_uang.loc[idx, 'Status'] = 'Valid'
                                 conn.update(worksheet="Keuangan", data=df_uang)
+                                
+                                # 2. LOGIKA BARU: Cari ID Order dan Lepas ke Produksi!
+                                ket = str(row['Keterangan'])
+                                if "ORD-" in ket:
+                                    # Ekstrak ID Order dari Keterangan (misal: "Penerimaan DP - ORD-2026... (PT ABC)")
+                                    try:
+                                        id_ekstrak = ket.split("ORD-")[1].split(" ")[0]
+                                        id_order_pasti = "ORD-" + id_ekstrak
+                                        
+                                        # Ubah status di Pemasaran biar nyambung ke antrean Produksi
+                                        if not df_pemasaran.empty and id_order_pasti in df_pemasaran['ID Order'].values:
+                                            df_pemasaran.loc[df_pemasaran['ID Order'] == id_order_pasti, 'Status Validasi'] = 'Sedang Diproses'
+                                            conn.update(worksheet="Pemasaran", data=df_pemasaran)
+                                    except:
+                                        pass # Lewati kalau ternyata format teksnya beda
+                                
                                 st.cache_data.clear()
-                                st.success("Uang masuk telah disahkan ke Buku Kas!")
+                                st.success("Dana divalidasi & Orderan berhasil dikirim ke Produksi!")
                                 st.rerun()
                         
                         if st.button("❌ Tolak (Gagal Bayar)", key=f"tolak_{idx}", use_container_width=True):

@@ -70,8 +70,8 @@ def jalankan(df_pem, df_produk, conn):
                 elif dp_masuk > 0: status_bayar = "DP / Cicilan"
                 else: status_bayar = "Belum Bayar"
                 
-                # Logika Masuk Produksi
-                status_produksi = "Sedang Diproses" if dp_masuk > 0 else "Menunggu Pembayaran"
+                # LOGIKA BARU: Jika DP masuk, JANGAN langsung ke produksi. Kirim ke Keuangan dulu!
+                status_produksi = "Menunggu Validasi Keuangan" if dp_masuk > 0 else "Menunggu Pembayaran"
                 
                 st.markdown(f"Status Pembayaran: **{status_bayar}** | Sisa Hutang Klien: **Rp {sisa_tagihan:,.0f}**")
                 st.caption(f"Status Order: *{status_produksi}*")
@@ -97,58 +97,59 @@ def jalankan(df_pem, df_produk, conn):
                         conn.update(worksheet="Pemasaran", data=pd.concat([df_pem, data_pem_baru], ignore_index=True))
 
                         # 2. Update Database KLIEN (CRM)
-                        try: df_klien = conn.read(worksheet="Database_Klien").dropna(how="all")
+                        try: 
+                            df_klien = conn.read(worksheet="Database_Klien").dropna(how="all")
+                            if 'Nama Klien' not in df_klien.columns: df_klien = pd.DataFrame(columns=["Nama Klien", "No WA", "Alamat", "Kategori"])
                         except: df_klien = pd.DataFrame(columns=["Nama Klien", "No WA", "Alamat", "Kategori"])
                         
-                        if nama_klien not in df_klien['Nama Klien'].values:
+                        if df_klien.empty or nama_klien not in df_klien['Nama Klien'].values:
                             new_klien = pd.DataFrame([{"Nama Klien": nama_klien, "No WA": wa_klien, "Alamat": alamat_klien, "Kategori": kategori_klien}])
                             conn.update(worksheet="Database_Klien", data=pd.concat([df_klien, new_klien], ignore_index=True))
 
                         # 3. Update BUKU PIUTANG
-                        try: df_piutang = conn.read(worksheet="Buku_Piutang").dropna(how="all")
+                        try: 
+                            df_piutang = conn.read(worksheet="Buku_Piutang").dropna(how="all")
+                            if 'ID Order' not in df_piutang.columns: df_piutang = pd.DataFrame(columns=["ID Order", "Sudah Dibayar", "Sisa Tagihan", "Status Pembayaran"])
                         except: df_piutang = pd.DataFrame(columns=["ID Order", "Sudah Dibayar", "Sisa Tagihan", "Status Pembayaran"])
                         
                         new_piutang = pd.DataFrame([{"ID Order": id_order, "Sudah Dibayar": dp_masuk, "Sisa Tagihan": sisa_tagihan, "Status Pembayaran": status_bayar}])
                         conn.update(worksheet="Buku_Piutang", data=pd.concat([df_piutang, new_piutang], ignore_index=True))
 
-                        # 4. Update KAS KEUANGAN (Jika ada DP masuk)
+                        # 4. Update KAS KEUANGAN (KIRIM KE RUANG TUNGGU VALIDASI)
                         if dp_masuk > 0:
-                            try: df_uang = conn.read(worksheet="Keuangan").dropna(how="all")
-                            except: df_uang = pd.DataFrame(columns=["Tanggal", "Keterangan", "Pemasukan (Rp)", "Pengeluaran (Rp)"])
+                            try: 
+                                df_uang = conn.read(worksheet="Keuangan").dropna(how="all")
+                                if 'Tanggal' not in df_uang.columns: df_uang = pd.DataFrame(columns=["Tanggal", "Keterangan", "Pemasukan (Rp)", "Pengeluaran (Rp)", "Status"])
+                                if 'Status' not in df_uang.columns: df_uang['Status'] = 'Valid'
+                            except: df_uang = pd.DataFrame(columns=["Tanggal", "Keterangan", "Pemasukan (Rp)", "Pengeluaran (Rp)", "Status"])
                             
-                            new_uang = pd.DataFrame([{"Tanggal": tgl_skrg, "Keterangan": f"Penerimaan {status_bayar} - {id_order} ({nama_klien})", "Pemasukan (Rp)": dp_masuk, "Pengeluaran (Rp)": 0}])
+                            # KUNCI PINTU: Statusnya jadi "Menunggu Validasi"
+                            new_uang = pd.DataFrame([{"Tanggal": tgl_skrg, "Keterangan": f"Penerimaan {status_bayar} - {id_order} ({nama_klien})", "Pemasukan (Rp)": dp_masuk, "Pengeluaran (Rp)": 0, "Status": "Menunggu Validasi"}])
                             conn.update(worksheet="Keuangan", data=pd.concat([df_uang, new_uang], ignore_index=True))
 
                         # Bersihkan Form
                         for k in ['in_nama', 'in_wa', 'in_alamat', 'in_model', 'in_jumlah', 'in_dp', 'in_file']: 
                             if k in st.session_state: del st.session_state[k]
                         
-                        st.session_state['notif_sukses'] = f"✅ Pesanan {id_order} berhasil didistribusikan ke seluruh divisi!"
+                        st.session_state['notif_sukses'] = f"✅ Pesanan {id_order} berhasil dibuat. Menunggu Validasi Akuntan!"
                         st.cache_data.clear(); st.rerun()
 
     # ==========================================
-    # TAB 2: DATABASE PESANAN
+    # TAB 2 & 3: DATABASE & INVOICE
     # ==========================================
     with tab2:
         st.markdown("### 📋 Seluruh Data Pesanan Masuk")
         st.info("💡 Karena data sudah terintegrasi, perubahan Nominal Uang/DP hanya bisa dilakukan di menu CRM & Piutang.")
         st.dataframe(df_pem, use_container_width=True, hide_index=True)
 
-    # ==========================================
-    # TAB 3: CETAK INVOICE OTOMATIS (UPDATE)
-    # ==========================================
     with tab3:
         st.markdown("### 🖨️ Cetak Invoice & Nota Pembayaran")
-        if df_pem.empty:
-            st.info("Belum ada data pesanan untuk dicetak.")
+        if df_pem.empty: st.info("Belum ada data pesanan untuk dicetak.")
         else:
             daftar_order = df_pem['ID Order'].dropna().tolist()
             pilih_order = st.selectbox("Pilih ID Order yang akan dicetak:", daftar_order)
-            
             if pilih_order:
                 data_order = df_pem[df_pem['ID Order'] == pilih_order].iloc[0]
-                
-                # Sedot data dari Piutang untuk nampilin DP & Sisa Tagihan di Invoice
                 try: 
                     df_piutang_inv = conn.read(worksheet="Buku_Piutang").dropna(how="all")
                     data_piutang = df_piutang_inv[df_piutang_inv['ID Order'] == pilih_order].iloc[0]
@@ -158,7 +159,6 @@ def jalankan(df_pem, df_produk, conn):
                 except:
                     dp_inv, sisa_inv, status_inv = 0, float(data_order['Total Harga']), "Belum Bayar"
 
-                # HTML Invoice Kustom
                 html_invoice = f"""
                 <html>
                 <head>
@@ -187,7 +187,6 @@ def jalankan(df_pem, df_produk, conn):
                                 Telp: 0812-3456-7890
                             </div>
                         </div>
-                        
                         <div style="display: flex; justify-content: space-between; margin-bottom: 30px;">
                             <div>
                                 <p style="margin: 0; color: #777;">Tagihan Kepada:</p>
@@ -199,48 +198,24 @@ def jalankan(df_pem, df_produk, conn):
                                 <p style="margin: 0; color: #17a2b8;"><strong>Status:</strong> {status_inv}</p>
                             </div>
                         </div>
-                        
                         <table>
-                            <tr>
-                                <th>Deskripsi Produk</th>
-                                <th style="text-align: center;">Jumlah</th>
-                                <th style="text-align: right;">Total Harga</th>
-                            </tr>
+                            <tr><th>Deskripsi Produk</th><th style="text-align: center;">Jumlah</th><th style="text-align: right;">Total Harga</th></tr>
                             <tr>
                                 <td>Pembuatan <b>{data_order['Model Topi']}</b> (Custom Design)</td>
                                 <td style="text-align: center;">{data_order['Jumlah (Pcs)']} Pcs</td>
                                 <td style="text-align: right;">Rp {float(data_order['Total Harga']):,.0f}</td>
                             </tr>
-                            <tr class="total-row">
-                                <td colspan="2" style="text-align: right;">GRAND TOTAL</td>
-                                <td style="text-align: right;">Rp {float(data_order['Total Harga']):,.0f}</td>
-                            </tr>
-                            <tr class="dp-row">
-                                <td colspan="2" style="text-align: right;">SUDAH DIBAYAR (DP)</td>
-                                <td style="text-align: right;">- Rp {dp_inv:,.0f}</td>
-                            </tr>
-                            <tr class="sisa-row">
-                                <td colspan="2" style="text-align: right;">SISA TAGIHAN</td>
-                                <td style="text-align: right;">Rp {sisa_inv:,.0f}</td>
-                            </tr>
+                            <tr class="total-row"><td colspan="2" style="text-align: right;">GRAND TOTAL</td><td style="text-align: right;">Rp {float(data_order['Total Harga']):,.0f}</td></tr>
+                            <tr class="dp-row"><td colspan="2" style="text-align: right;">SUDAH DIBAYAR (DP)</td><td style="text-align: right;">- Rp {dp_inv:,.0f}</td></tr>
+                            <tr class="sisa-row"><td colspan="2" style="text-align: right;">SISA TAGIHAN</td><td style="text-align: right;">Rp {sisa_inv:,.0f}</td></tr>
                         </table>
-                        
                         <div class="footer">
                             <p>Terima kasih atas kepercayaan Anda pada Pabrik Konveksi Topi Cerdas.</p>
-                            <p><i>Invoice ini dicetak otomatis oleh Sistem ERP dan sah tanpa tanda tangan.</i></p>
+                            <p><i>Invoice ini dicetak otomatis oleh Sistem ERP.</i></p>
                         </div>
                     </div>
                 </body>
                 </html>
                 """
-                
                 st.components.v1.html(html_invoice, height=600, scrolling=True)
-                st.markdown("<br>", unsafe_allow_html=True)
-                st.download_button(
-                    label="📄 Download Invoice (Buka & Print jadi PDF)",
-                    data=html_invoice,
-                    file_name=f"Invoice_{data_order['ID Order']}.html",
-                    mime="text/html",
-                    type="primary",
-                    use_container_width=True
-                )
+                st.download_button("📄 Download Invoice (Buka & Print jadi PDF)", data=html_invoice, file_name=f"Invoice_{data_order['ID Order']}.html", mime="text/html", type="primary", use_container_width=True)
