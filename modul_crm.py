@@ -15,10 +15,16 @@ def jalankan(df_pem, df_klien, df_piutang, df_uang, conn):
             data_baru = []
             for o_id in order_baru:
                 total_harga = df_pem.loc[df_pem['ID Order'] == o_id, 'Total Harga'].values[0]
-                data_baru.append({"ID Order": o_id, "Sudah Dibayar": 0, "Sisa Tagihan": total_harga, "Status Pembayaran": "Belum Bayar"})
+                data_baru.append({
+                    "ID Order": o_id,
+                    "Sudah Dibayar": 0,
+                    "Sisa Tagihan": total_harga,
+                    "Status Pembayaran": "Belum Bayar"
+                })
             df_piutang = pd.concat([df_piutang, pd.DataFrame(data_baru)], ignore_index=True)
             conn.update(worksheet="Buku_Piutang", data=df_piutang)
 
+    # --- 2. MINI DASHBOARD CRM ---
     df_piutang['Sisa Tagihan'] = pd.to_numeric(df_piutang['Sisa Tagihan'], errors='coerce').fillna(0)
     total_piutang = df_piutang['Sisa Tagihan'].sum()
     total_klien = len(df_klien)
@@ -35,11 +41,13 @@ def jalankan(df_pem, df_klien, df_piutang, df_uang, conn):
     # ==========================================
     with tab1:
         st.markdown("### 💸 Pencatatan DP & Pelunasan")
+        
         if df_piutang.empty:
             st.info("Belum ada data order untuk ditagih.")
         else:
             df_merge = pd.merge(df_piutang, df_pem[['ID Order', 'Nama Klien', 'Total Harga']], on="ID Order", how="left")
             df_belum_lunas = df_merge[df_merge['Status Pembayaran'] != 'Lunas']
+            
             col_form, col_data = st.columns([1.2, 2])
             
             with col_form:
@@ -47,16 +55,26 @@ def jalankan(df_pem, df_klien, df_piutang, df_uang, conn):
                 if df_belum_lunas.empty:
                     st.success("🎉 Luar biasa! Semua tagihan klien saat ini sudah LUNAS.")
                 else:
+                    # =========================================================
+                    # PERBAIKAN: SELECTBOX & INFO DITARUH DI LUAR FORM!
+                    # =========================================================
                     daftar_tagihan = df_belum_lunas['ID Order'] + " - " + df_belum_lunas['Nama Klien']
                     pilih_order = st.selectbox("Pilih Tagihan:", daftar_tagihan)
+                    
                     id_terpilih = pilih_order.split(" - ")[0]
                     data_order = df_belum_lunas[df_belum_lunas['ID Order'] == id_terpilih].iloc[0]
                     
-                    st.info(f"**Total Tagihan:** Rp {float(data_order['Total Harga']):,.0f} \n\n**Uang Masuk:** Rp {float(data_order['Sudah Dibayar']):,.0f} \n\n**Sisa Hutang:** Rp {float(data_order['Sisa Tagihan']):,.0f}")
+                    # Tampilkan Info (Lengkap dengan Uang Masuk)
+                    st.info(
+                        f"**Total Tagihan:** Rp {float(data_order['Total Harga']):,.0f} \n\n"
+                        f"**Uang Masuk (Sudah Dibayar):** Rp {float(data_order['Sudah Dibayar']):,.0f} \n\n"
+                        f"**Sisa Hutang:** Rp {float(data_order['Sisa Tagihan']):,.0f}"
+                    )
                     
+                    # FORM HANYA UNTUK INPUT NOMINAL & TOMBOL
                     with st.form("form_bayar", clear_on_submit=True):
                         nominal_bayar = st.number_input("Nominal Bayar (Rp)", min_value=0.0, max_value=float(data_order['Sisa Tagihan']), step=50000.0)
-                        catat_ke_keuangan = st.checkbox("Teruskan ke Keuangan untuk Divalidasi", value=True)
+                        catat_ke_keuangan = st.checkbox("Otomatis catat sebagai Pemasukan di Kas Keuangan", value=True)
                         
                         if st.form_submit_button("✅ Konfirmasi Pembayaran", type="primary", use_container_width=True):
                             if nominal_bayar > 0:
@@ -70,22 +88,17 @@ def jalankan(df_pem, df_klien, df_piutang, df_uang, conn):
                                     df_piutang.loc[df_piutang['ID Order'] == id_terpilih, 'Status Pembayaran'] = status_baru
                                     conn.update(worksheet="Buku_Piutang", data=df_piutang)
                                     
-                                    # LOGIKA BARU: Kirim dengan status "Menunggu Validasi"
                                     if catat_ke_keuangan:
-                                        if 'Status' not in df_uang.columns:
-                                            df_uang['Status'] = 'Valid'
-                                        
                                         new_uang = pd.DataFrame([{
                                             "Tanggal": datetime.now().strftime("%Y-%m-%d"),
                                             "Keterangan": f"Pembayaran {id_terpilih} ({status_baru})",
                                             "Pemasukan (Rp)": nominal_bayar,
-                                            "Pengeluaran (Rp)": 0,
-                                            "Status": "Menunggu Validasi" # <--- KUNCI PINTUNYA DI SINI
+                                            "Pengeluaran (Rp)": 0
                                         }])
                                         df_uang_baru = pd.concat([df_uang, new_uang], ignore_index=True)
                                         conn.update(worksheet="Keuangan", data=df_uang_baru)
                                         
-                                    st.success(f"Pembayaran Rp {nominal_bayar:,.0f} dicatat & menunggu validasi Keuangan!")
+                                    st.success(f"Pembayaran Rp {nominal_bayar:,.0f} berhasil dicatat!")
                                     st.cache_data.clear()
                                     st.rerun()
                             else:
@@ -120,15 +133,21 @@ def jalankan(df_pem, df_klien, df_piutang, df_uang, conn):
                         st.cache_data.clear(); st.rerun()
                     else:
                         st.error("Nama Klien wajib diisi!")
+        
         with col_d:
             st.markdown("#### 📋 Daftar Klien Terdaftar")
-            if df_klien.empty: st.info("Belum ada data klien yang terdaftar.")
+            if df_klien.empty:
+                st.info("Belum ada data klien yang terdaftar.")
             else:
                 for idx, row in df_klien.iterrows():
                     with st.container(border=True):
                         c_info, c_btn = st.columns([3, 1])
                         c_info.markdown(f"**{row.get('Nama Klien', 'Tanpa Nama')}** — *( {row.get('Kategori', 'Reguler')} )*")
                         c_info.caption(f"📍 {row.get('Alamat', '-')}")
+                        
                         no_wa = str(row.get('No WA', '')).replace('0', '62', 1) if str(row.get('No WA', '')).startswith('0') else str(row.get('No WA', ''))
-                        if no_wa: c_btn.markdown(f"<a href='https://wa.me/{no_wa}' target='_blank'><button style='width:100%; border-radius:5px; background-color:#25D366; color:white; border:none; padding:8px; font-weight:bold; cursor:pointer;'>💬 Chat WA</button></a>", unsafe_allow_html=True)
-                        else: c_btn.button("No WA Kosong", disabled=True, key=f"wa_{idx}")
+                        
+                        if no_wa:
+                            c_btn.markdown(f"<a href='https://wa.me/{no_wa}' target='_blank'><button style='width:100%; border-radius:5px; background-color:#25D366; color:white; border:none; padding:8px; font-weight:bold; cursor:pointer;'>💬 Chat WA</button></a>", unsafe_allow_html=True)
+                        else:
+                            c_btn.button("No WA Kosong", disabled=True, key=f"wa_{idx}")

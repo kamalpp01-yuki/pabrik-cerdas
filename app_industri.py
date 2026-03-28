@@ -252,18 +252,11 @@ def main_app():
     # ==========================================
     elif menu == "💰 Keuangan (Validator)":
         st.header("ERP Keuangan & Validasi")
-        
-        # PERHATIKAN: Tambah "Status" di ujung list!
-        kolom_uang = ["Tanggal", "Keterangan", "Pemasukan (Rp)", "Pengeluaran (Rp)", "Status"]
-        # Tangkap error kalau sheetnya belum punya kolom Status, paksa sedot semua
-        try:
-            df_uang = get_data("Keuangan", [0,1,2,3,4], kolom_uang)
-        except:
-            df_uang = conn.read(worksheet="Keuangan", ttl=60).dropna(how="all")
+        kolom_uang = ["Tanggal", "Keterangan", "Pemasukan (Rp)", "Pengeluaran (Rp)"]
+        df_uang = get_data("Keuangan", [0,1,2,3], kolom_uang)
         
         kolom_pem = ["ID Order", "Tanggal", "Nama Klien", "Model Topi", "Jumlah (Pcs)", "Total Harga", "File Desain", "Status Validasi"]
-        try: df_pemasaran = get_data("Pemasaran", [0,1,2,3,4,5,6,7], kolom_pem)
-        except: df_pemasaran = pd.DataFrame()
+        df_pemasaran = get_data("Pemasaran", [0,1,2,3,4,5,6,7], kolom_pem)
         
         import modul_keuangan
         modul_keuangan.jalankan(df_uang, df_pemasaran, conn)
