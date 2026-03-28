@@ -2,55 +2,99 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-def jalankan(df_uang, df_pem, conn):
-    st.markdown("## 💰 Modul Keuangan & Validasi")
+def jalankan(df_uang, df_pemasaran, conn):
+    st.markdown("## 💰 ERP Keuangan & Validator Mutasi")
     
-    # --- MINI DASHBOARD KEUANGAN ---
-    df_uang['Pemasukan (Rp)'] = pd.to_numeric(df_uang['Pemasukan (Rp)'], errors='coerce').fillna(0)
-    df_uang['Pengeluaran (Rp)'] = pd.to_numeric(df_uang['Pengeluaran (Rp)'], errors='coerce').fillna(0)
+    # --- AUTO FIX KOLOM STATUS ---
+    if 'Status' not in df_uang.columns:
+        df_uang['Status'] = 'Valid' # Anggap data lama sudah valid
     
-    total_masuk = df_uang['Pemasukan (Rp)'].sum()
-    total_keluar = df_uang['Pengeluaran (Rp)'].sum()
+    # Pisahkan data Valid dan Menunggu Validasi
+    df_valid = df_uang[df_uang['Status'] == 'Valid'].copy()
+    df_pending = df_uang[df_uang['Status'] == 'Menunggu Validasi'].copy()
+    
+    # Hitung Saldo Kas HANYA dari uang yang sudah Valid
+    df_valid['Pemasukan (Rp)'] = pd.to_numeric(df_valid['Pemasukan (Rp)'], errors='coerce').fillna(0)
+    df_valid['Pengeluaran (Rp)'] = pd.to_numeric(df_valid['Pengeluaran (Rp)'], errors='coerce').fillna(0)
+    
+    total_masuk = df_valid['Pemasukan (Rp)'].sum()
+    total_keluar = df_valid['Pengeluaran (Rp)'].sum()
     saldo_kas = total_masuk - total_keluar
     
+    total_menunggu = pd.to_numeric(df_pending['Pemasukan (Rp)'], errors='coerce').fillna(0).sum() if not df_pending.empty else 0
+
     c1, c2, c3 = st.columns(3)
-    c1.metric("🟢 Saldo Kas Aktif", f"Rp {saldo_kas:,.0f}")
-    c2.metric("📈 Total Pemasukan", f"Rp {total_masuk:,.0f}")
-    c3.metric("📉 Total Pengeluaran", f"Rp {total_keluar:,.0f}")
+    c1.metric("💵 Saldo Kas Bersih (Valid)", f"Rp {saldo_kas:,.0f}".replace(",", "."))
+    c2.metric("📉 Total Pengeluaran", f"Rp {total_keluar:,.0f}".replace(",", "."))
+    c3.metric("⏳ Uang Menunggu Validasi", f"Rp {total_menunggu:,.0f}".replace(",", "."), delta="Cek Mutasi Bank", delta_color="inverse")
     st.divider()
 
-    # 3 TAB TERPISAH
-    tab1, tab2, tab3 = st.tabs(["✅ Validasi Order", "📒 Buku Kas (Riwayat)", "💸 Input Pengeluaran"])
+    tab1, tab2, tab3 = st.tabs(["🛡️ Validasi Pembayaran Masuk", "📖 Buku Kas Umum", "📤 Input Pengeluaran Pabrik"])
 
+    # ==========================================
+    # TAB 1: RUANG TUNGGU VALIDATOR
+    # ==========================================
     with tab1:
-        df_pending = df_pem[df_pem['Status Validasi'] == 'Menunggu Pembayaran']
+        st.markdown("### 🛡️ Menunggu Validasi Akuntan")
+        st.info("💡 Pastikan cek mutasi Rekening BCA/Mandiri pabrik. Jika uang sudah benar-benar masuk, klik 'Validasi'.")
+        
         if df_pending.empty:
-            st.info("Hore! Belum ada tagihan yang tertunggak.")
+            st.success("🏝️ Semua pembayaran sudah tervalidasi. Tidak ada antrean.")
         else:
-            for index, row in df_pending.iterrows():
-                with st.expander(f"💰 {row['ID Order']} - {row['Nama Klien']} (Rp {row['Total Harga']:,.0f})"):
-                    st.write(f"**Model:** {row['Model Topi']} | **Jumlah:** {row['Jumlah (Pcs)']} Pcs")
-                    if st.button("Lunas & Validasi ➡️ Masuk Produksi", key=f"val_{row['ID Order']}"):
-                        df_pem.loc[df_pem['ID Order'] == row['ID Order'], 'Status Validasi'] = 'Siap Produksi'
-                        conn.update(worksheet="Pemasaran", data=df_pem)
-                        data_uang_baru = pd.DataFrame([{"Tanggal": datetime.now().strftime("%Y-%m-%d"), "Keterangan": f"Pelunasan {row['ID Order']}", "Pemasukan (Rp)": row['Total Harga'], "Pengeluaran (Rp)": 0}])
-                        conn.update(worksheet="Keuangan", data=pd.concat([df_uang, data_uang_baru], ignore_index=True))
-                        st.cache_data.clear(); st.rerun()
+            for idx, row in df_pending.iterrows():
+                with st.container(border=True):
+                    col_info, col_btn = st.columns([3, 1])
+                    
+                    with col_info:
+                        st.markdown(f"**Tanggal:** {row['Tanggal']}")
+                        st.write(f"📝 **Keterangan:** {row['Keterangan']}")
+                        st.markdown(f"💰 **Nominal Transfer:** <span style='color:#00ADB5; font-size:20px; font-weight:bold;'>Rp {float(row['Pemasukan (Rp)']):,.0f}</span>", unsafe_allow_html=True)
+                        
+                    with col_btn:
+                        st.markdown("<br>", unsafe_allow_html=True)
+                        if st.button("✅ Validasi Uang Masuk", key=f"val_{idx}", use_container_width=True, type="primary"):
+                            with st.spinner("Memvalidasi dana..."):
+                                # Ubah status di dataframe utama
+                                df_uang.loc[idx, 'Status'] = 'Valid'
+                                conn.update(worksheet="Keuangan", data=df_uang)
+                                st.cache_data.clear()
+                                st.success("Uang masuk telah disahkan ke Buku Kas!")
+                                st.rerun()
+                        
+                        if st.button("❌ Tolak (Gagal Bayar)", key=f"tolak_{idx}", use_container_width=True):
+                            # Hapus baris jika ternyata struknya palsu / transferan gagal
+                            df_uang = df_uang.drop(idx)
+                            conn.update(worksheet="Keuangan", data=df_uang)
+                            st.cache_data.clear()
+                            st.rerun()
 
+    # ==========================================
+    # TAB 2: BUKU KAS UMUM (HANYA YANG VALID)
+    # ==========================================
     with tab2:
-        st.dataframe(df_uang, use_container_width=True, height=400)
-            
+        st.markdown("### 📖 Buku Kas Terverifikasi")
+        st.dataframe(df_valid, use_container_width=True, hide_index=True)
+
+    # ==========================================
+    # TAB 3: INPUT PENGELUARAN PABRIK
+    # ==========================================
     with tab3:
+        st.markdown("### 📤 Catat Pengeluaran Operasional")
         with st.form("form_pengeluaran", clear_on_submit=True):
-            st.markdown("### Catat Arus Kas Keluar")
-            ket = st.text_input("Keterangan", placeholder="Misal: Bayar Listrik / Gaji Tukang Jahit")
-            nominal = st.number_input("Nominal (Rp)", min_value=0, step=50000)
-            if st.form_submit_button("💾 Catat Pengeluaran", use_container_width=True):
-                if ket and nominal > 0:
-                    data_keluar = pd.DataFrame([{"Tanggal": datetime.now().strftime("%Y-%m-%d"), "Keterangan": ket, "Pemasukan (Rp)": 0, "Pengeluaran (Rp)": nominal}])
-                    conn.update(worksheet="Keuangan", data=pd.concat([df_uang, data_keluar], ignore_index=True))
-                    st.cache_data.clear(); st.success("Tercatat!"); st.rerun()
+            ket_keluar = st.text_input("Keterangan Pengeluaran", placeholder="Misal: Bayar Listrik, Gaji Penjahit, Beli Snack")
+            nominal_keluar = st.number_input("Nominal (Rp)", min_value=1000, step=10000)
+            
+            if st.form_submit_button("💸 Simpan Pengeluaran", use_container_width=True):
+                if ket_keluar == "": st.error("Keterangan tidak boleh kosong!")
                 else:
-                    # --- TAMBAHKAN SPINNER DI SINI ---
-                    with st.spinner("🚀 Sedang  menyimpan data ..."):
-                        st.error("Isi data dengan benar!")
+                    new_keluar = pd.DataFrame([{
+                        "Tanggal": datetime.now().strftime("%Y-%m-%d"),
+                        "Keterangan": ket_keluar,
+                        "Pemasukan (Rp)": 0,
+                        "Pengeluaran (Rp)": nominal_keluar,
+                        "Status": "Valid" # Pengeluaran langsung valid
+                    }])
+                    df_uang_update = pd.concat([df_uang, new_keluar], ignore_index=True)
+                    conn.update(worksheet="Keuangan", data=df_uang_update)
+                    st.success("✅ Pengeluaran berhasil dicatat!")
+                    st.cache_data.clear(); st.rerun()
