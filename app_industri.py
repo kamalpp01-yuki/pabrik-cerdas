@@ -168,6 +168,7 @@ def main_app():
     menu = st.sidebar.radio("Pilih Modul:", [
         "📊 Dashboard Executive",
         "🤝 Pemasaran (Sales)", 
+        "📒 CRM & Piutang",
         "💰 Keuangan (Validator)",
         "🏭 Produksi (PPIC & QC)", 
         "📦 Gudang (Inventory)"
@@ -220,6 +221,32 @@ def main_app():
             import modul_pemasaran
             modul_pemasaran.jalankan(df_pem, df_produk, conn)
 
+    # ==========================================
+    # MODUL 1.5: CRM & PIUTANG (MODUL BARU)
+    # ==========================================
+    elif menu == "📒 CRM & Piutang":
+        st.header("📒 Modul CRM & Manajemen Piutang")
+        with st.spinner("⏳ Memuat data Klien & Buku Piutang..."):
+            # Sedot Data Pemasaran untuk sinkronisasi Tagihan
+            kolom_pem = ["ID Order", "Tanggal", "Nama Klien", "Model Topi", "Jumlah (Pcs)", "Total Harga", "File Desain", "Status Validasi"]
+            try: df_pem = get_data("Pemasaran", [0,1,2,3,4,5,6,7], kolom_pem)
+            except: df_pem = pd.DataFrame(columns=kolom_pem)
+            
+            # Sedot Data Keuangan (Biar DP/Lunas bisa masuk otomatis)
+            try: df_uang = conn.read(worksheet="Keuangan").dropna(how="all")
+            except: df_uang = pd.DataFrame()
+
+            # Sedot Tab Baru: Database Klien
+            try: df_klien = conn.read(worksheet="Database_Klien").dropna(how="all")
+            except: df_klien = pd.DataFrame(columns=["Nama Klien", "No WA", "Alamat", "Kategori"])
+            
+            # Sedot Tab Baru: Buku Piutang
+            try: df_piutang = conn.read(worksheet="Buku_Piutang").dropna(how="all")
+            except: df_piutang = pd.DataFrame(columns=["ID Order", "Sudah Dibayar", "Sisa Tagihan", "Status Pembayaran"])
+            
+            # Panggil File Baru Kita
+            import modul_crm
+            modul_crm.jalankan(df_pem, df_klien, df_piutang, df_uang, conn)
     # ==========================================
     # MODUL 2: KEUANGAN (VALIDATOR)
     # ==========================================
