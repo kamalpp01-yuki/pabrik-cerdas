@@ -6,7 +6,6 @@ def jalankan(df_pem, df_klien, df_piutang, df_uang, conn):
     st.markdown("## 👥 Manajemen Klien & Buku Piutang")
     
     # --- 1. MESIN SINKRONISASI OTOMATIS (SALES -> PIUTANG) ---
-    # Memastikan setiap orderan baru di Pemasaran langsung punya tagihan di Buku Piutang
     if not df_pem.empty:
         order_pem = set(df_pem['ID Order'])
         order_piutang = set(df_piutang['ID Order']) if not df_piutang.empty else set()
@@ -46,7 +45,6 @@ def jalankan(df_pem, df_klien, df_piutang, df_uang, conn):
         if df_piutang.empty:
             st.info("Belum ada data order untuk ditagih.")
         else:
-            # Menggabungkan data Pemasaran dan Piutang agar muncul nama Klien
             df_merge = pd.merge(df_piutang, df_pem[['ID Order', 'Nama Klien', 'Total Harga']], on="ID Order", how="left")
             df_belum_lunas = df_merge[df_merge['Status Pembayaran'] != 'Lunas']
             
@@ -57,23 +55,30 @@ def jalankan(df_pem, df_klien, df_piutang, df_uang, conn):
                 if df_belum_lunas.empty:
                     st.success("🎉 Luar biasa! Semua tagihan klien saat ini sudah LUNAS.")
                 else:
+                    # =========================================================
+                    # PERBAIKAN: SELECTBOX & INFO DITARUH DI LUAR FORM!
+                    # =========================================================
+                    daftar_tagihan = df_belum_lunas['ID Order'] + " - " + df_belum_lunas['Nama Klien']
+                    pilih_order = st.selectbox("Pilih Tagihan:", daftar_tagihan)
+                    
+                    id_terpilih = pilih_order.split(" - ")[0]
+                    data_order = df_belum_lunas[df_belum_lunas['ID Order'] == id_terpilih].iloc[0]
+                    
+                    # Tampilkan Info (Lengkap dengan Uang Masuk)
+                    st.info(
+                        f"**Total Tagihan:** Rp {float(data_order['Total Harga']):,.0f} \n\n"
+                        f"**Uang Masuk (Sudah Dibayar):** Rp {float(data_order['Sudah Dibayar']):,.0f} \n\n"
+                        f"**Sisa Hutang:** Rp {float(data_order['Sisa Tagihan']):,.0f}"
+                    )
+                    
+                    # FORM HANYA UNTUK INPUT NOMINAL & TOMBOL
                     with st.form("form_bayar", clear_on_submit=True):
-                        # Pilihan dropdown tagihan yang belum lunas
-                        daftar_tagihan = df_belum_lunas['ID Order'] + " - " + df_belum_lunas['Nama Klien']
-                        pilih_order = st.selectbox("Pilih Tagihan:", daftar_tagihan)
-                        
-                        id_terpilih = pilih_order.split(" - ")[0]
-                        data_order = df_belum_lunas[df_belum_lunas['ID Order'] == id_terpilih].iloc[0]
-                        
-                        st.info(f"**Total Tagihan:** Rp {float(data_order['Total Harga']):,.0f} \n\n **Sisa Hutang:** Rp {float(data_order['Sisa Tagihan']):,.0f}")
-                        
                         nominal_bayar = st.number_input("Nominal Bayar (Rp)", min_value=0.0, max_value=float(data_order['Sisa Tagihan']), step=50000.0)
                         catat_ke_keuangan = st.checkbox("Otomatis catat sebagai Pemasukan di Kas Keuangan", value=True)
                         
                         if st.form_submit_button("✅ Konfirmasi Pembayaran", type="primary", use_container_width=True):
                             if nominal_bayar > 0:
                                 with st.spinner("Mencatat pembayaran..."):
-                                    # 1. Update Buku Piutang
                                     sudah_bayar_baru = float(data_order['Sudah Dibayar']) + nominal_bayar
                                     sisa_baru = float(data_order['Total Harga']) - sudah_bayar_baru
                                     status_baru = "Lunas" if sisa_baru <= 0 else "DP / Cicilan"
@@ -83,7 +88,6 @@ def jalankan(df_pem, df_klien, df_piutang, df_uang, conn):
                                     df_piutang.loc[df_piutang['ID Order'] == id_terpilih, 'Status Pembayaran'] = status_baru
                                     conn.update(worksheet="Buku_Piutang", data=df_piutang)
                                     
-                                    # 2. Update Modul Keuangan (Cascading)
                                     if catat_ke_keuangan:
                                         new_uang = pd.DataFrame([{
                                             "Tanggal": datetime.now().strftime("%Y-%m-%d"),
@@ -135,7 +139,6 @@ def jalankan(df_pem, df_klien, df_piutang, df_uang, conn):
             if df_klien.empty:
                 st.info("Belum ada data klien yang terdaftar.")
             else:
-                # Tampilkan klien dengan Card View ala Pro
                 for idx, row in df_klien.iterrows():
                     with st.container(border=True):
                         c_info, c_btn = st.columns([3, 1])
