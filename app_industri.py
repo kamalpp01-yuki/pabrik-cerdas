@@ -252,11 +252,22 @@ def main_app():
     # ==========================================
     elif menu == "💰 Keuangan (Validator)":
         st.header("ERP Keuangan & Validasi")
-        kolom_uang = ["Tanggal", "Keterangan", "Pemasukan (Rp)", "Pengeluaran (Rp)"]
-        df_uang = get_data("Keuangan", [0,1,2,3], kolom_uang)
+        
+        # PERBAIKAN DI SINI: Tambah "Status" di ujung list dan ambil 5 kolom!
+        kolom_uang = ["Tanggal", "Keterangan", "Pemasukan (Rp)", "Pengeluaran (Rp)", "Status"]
+        
+        # Pakai try-except biar aman dan anti-error
+        try:
+            df_uang = get_data("Keuangan", [0,1,2,3,4], kolom_uang)
+        except:
+            # Kalau error karena kolom di GSheets berantakan, sedot paksa semua
+            df_uang = conn.read(worksheet="Keuangan", ttl=60).dropna(how="all")
         
         kolom_pem = ["ID Order", "Tanggal", "Nama Klien", "Model Topi", "Jumlah (Pcs)", "Total Harga", "File Desain", "Status Validasi"]
-        df_pemasaran = get_data("Pemasaran", [0,1,2,3,4,5,6,7], kolom_pem)
+        try: 
+            df_pemasaran = get_data("Pemasaran", [0,1,2,3,4,5,6,7], kolom_pem)
+        except: 
+            df_pemasaran = pd.DataFrame()
         
         import modul_keuangan
         modul_keuangan.jalankan(df_uang, df_pemasaran, conn)
