@@ -96,25 +96,39 @@ def jalankan(df_pem, df_produk, conn):
                         data_pem_baru = pd.DataFrame([{"ID Order": id_order, "Tanggal": tgl_skrg, "Nama Klien": nama_klien, "Model Topi": model_topi, "Jumlah (Pcs)": jumlah, "Total Harga": total_harga, "File Desain": nama_file, "Status Validasi": status_produksi}])
                         conn.update(worksheet="Pemasaran", data=pd.concat([df_pem, data_pem_baru], ignore_index=True))
 
-                        # 2. Update Database KLIEN (CRM)
-                        try: df_klien = conn.read(worksheet="Database_Klien").dropna(how="all")
-                        except: df_klien = pd.DataFrame(columns=["Nama Klien", "No WA", "Alamat", "Kategori"])
+                        # 2. Update Database KLIEN (CRM) - ANTI ERROR
+                        try: 
+                            df_klien = conn.read(worksheet="Database_Klien").dropna(how="all")
+                            # Jika sheet kosong / gak ada header, paksa bikin kerangka kolom
+                            if 'Nama Klien' not in df_klien.columns: 
+                                df_klien = pd.DataFrame(columns=["Nama Klien", "No WA", "Alamat", "Kategori"])
+                        except: 
+                            df_klien = pd.DataFrame(columns=["Nama Klien", "No WA", "Alamat", "Kategori"])
                         
-                        if nama_klien not in df_klien['Nama Klien'].values:
+                        # Cek apakah nama klien sudah ada, kalau belum tambahkan
+                        if df_klien.empty or nama_klien not in df_klien['Nama Klien'].values:
                             new_klien = pd.DataFrame([{"Nama Klien": nama_klien, "No WA": wa_klien, "Alamat": alamat_klien, "Kategori": kategori_klien}])
                             conn.update(worksheet="Database_Klien", data=pd.concat([df_klien, new_klien], ignore_index=True))
 
-                        # 3. Update BUKU PIUTANG
-                        try: df_piutang = conn.read(worksheet="Buku_Piutang").dropna(how="all")
-                        except: df_piutang = pd.DataFrame(columns=["ID Order", "Sudah Dibayar", "Sisa Tagihan", "Status Pembayaran"])
+                        # 3. Update BUKU PIUTANG - ANTI ERROR
+                        try: 
+                            df_piutang = conn.read(worksheet="Buku_Piutang").dropna(how="all")
+                            if 'ID Order' not in df_piutang.columns: 
+                                df_piutang = pd.DataFrame(columns=["ID Order", "Sudah Dibayar", "Sisa Tagihan", "Status Pembayaran"])
+                        except: 
+                            df_piutang = pd.DataFrame(columns=["ID Order", "Sudah Dibayar", "Sisa Tagihan", "Status Pembayaran"])
                         
                         new_piutang = pd.DataFrame([{"ID Order": id_order, "Sudah Dibayar": dp_masuk, "Sisa Tagihan": sisa_tagihan, "Status Pembayaran": status_bayar}])
                         conn.update(worksheet="Buku_Piutang", data=pd.concat([df_piutang, new_piutang], ignore_index=True))
 
-                        # 4. Update KAS KEUANGAN (Jika ada DP masuk)
+                        # 4. Update KAS KEUANGAN (Jika ada DP masuk) - ANTI ERROR
                         if dp_masuk > 0:
-                            try: df_uang = conn.read(worksheet="Keuangan").dropna(how="all")
-                            except: df_uang = pd.DataFrame(columns=["Tanggal", "Keterangan", "Pemasukan (Rp)", "Pengeluaran (Rp)"])
+                            try: 
+                                df_uang = conn.read(worksheet="Keuangan").dropna(how="all")
+                                if 'Tanggal' not in df_uang.columns: 
+                                    df_uang = pd.DataFrame(columns=["Tanggal", "Keterangan", "Pemasukan (Rp)", "Pengeluaran (Rp)"])
+                            except: 
+                                df_uang = pd.DataFrame(columns=["Tanggal", "Keterangan", "Pemasukan (Rp)", "Pengeluaran (Rp)"])
                             
                             new_uang = pd.DataFrame([{"Tanggal": tgl_skrg, "Keterangan": f"Penerimaan {status_bayar} - {id_order} ({nama_klien})", "Pemasukan (Rp)": dp_masuk, "Pengeluaran (Rp)": 0}])
                             conn.update(worksheet="Keuangan", data=pd.concat([df_uang, new_uang], ignore_index=True))
