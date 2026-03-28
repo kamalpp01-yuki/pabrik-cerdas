@@ -7,7 +7,7 @@ def jalankan(df_uang, df_pemasaran, conn):
     
     # --- AUTO FIX KOLOM STATUS ---
     if 'Status' not in df_uang.columns:
-        df_uang['Status'] = 'Valid' # Anggap data lama sudah valid
+        df_uang['Status'] = 'Valid'
     
     # Pisahkan data Valid dan Menunggu Validasi
     df_valid = df_uang[df_uang['Status'] == 'Valid'].copy()
@@ -54,31 +54,36 @@ def jalankan(df_uang, df_pemasaran, conn):
                         st.markdown("<br>", unsafe_allow_html=True)
                         if st.button("✅ Validasi Uang Masuk", key=f"val_{idx}", use_container_width=True, type="primary"):
                             with st.spinner("Memvalidasi dana dan meneruskan ke Produksi..."):
-                                # 1. Ubah status Keuangan jadi Valid
+                                # 1. Ubah status Keuangan
                                 df_uang.loc[idx, 'Status'] = 'Valid'
                                 conn.update(worksheet="Keuangan", data=df_uang)
                                 
-                                # 2. LOGIKA BARU: Cari ID Order dan Lepas ke Produksi!
+                                # 2. LOGIKA BARU: Pelacak ID Order Kebal Spasi!
                                 ket = str(row['Keterangan'])
                                 if "ORD-" in ket:
-                                    # Ekstrak ID Order dari Keterangan (misal: "Penerimaan DP - ORD-2026... (PT ABC)")
                                     try:
-                                        id_ekstrak = ket.split("ORD-")[1].split(" ")[0]
+                                        # Potong string dengan aman dan buang semua spasi gaib
+                                        id_ekstrak = ket.split("ORD-")[1].split(" ")[0].replace(")", "").strip()
                                         id_order_pasti = "ORD-" + id_ekstrak
                                         
-                                        # Ubah status di Pemasaran biar nyambung ke antrean Produksi
-                                        if not df_pemasaran.empty and id_order_pasti in df_pemasaran['ID Order'].values:
+                                        # Paksa hapus spasi di database pemasaran biar cocok 100%
+                                        df_pemasaran['ID Order'] = df_pemasaran['ID Order'].astype(str).str.strip()
+                                        
+                                        if id_order_pasti in df_pemasaran['ID Order'].values:
+                                            # Tembak statusnya jadi "Sedang Diproses"
                                             df_pemasaran.loc[df_pemasaran['ID Order'] == id_order_pasti, 'Status Validasi'] = 'Sedang Diproses'
                                             conn.update(worksheet="Pemasaran", data=df_pemasaran)
-                                    except:
-                                        pass # Lewati kalau ternyata format teksnya beda
+                                        else:
+                                            # Kalau tetep gagal nemu, munculin peringatan biar ketahuan
+                                            st.warning(f"⚠️ Uang tervalidasi, TAPI sistem gagal menemukan {id_order_pasti} di Modul Pemasaran. Harap ubah statusnya ke 'Sedang Diproses' manual di GSheets.")
+                                    except Exception as e:
+                                        st.error(f"Error pelacakan ID: {e}")
                                 
                                 st.cache_data.clear()
-                                st.success("Dana divalidasi & Orderan berhasil dikirim ke Produksi!")
+                                st.success("✅ Dana divalidasi & Status pesanan berhasil diupdate!")
                                 st.rerun()
                         
                         if st.button("❌ Tolak (Gagal Bayar)", key=f"tolak_{idx}", use_container_width=True):
-                            # Hapus baris jika ternyata struknya palsu / transferan gagal
                             df_uang = df_uang.drop(idx)
                             conn.update(worksheet="Keuangan", data=df_uang)
                             st.cache_data.clear()
@@ -108,7 +113,7 @@ def jalankan(df_uang, df_pemasaran, conn):
                         "Keterangan": ket_keluar,
                         "Pemasukan (Rp)": 0,
                         "Pengeluaran (Rp)": nominal_keluar,
-                        "Status": "Valid" # Pengeluaran langsung valid
+                        "Status": "Valid"
                     }])
                     df_uang_update = pd.concat([df_uang, new_keluar], ignore_index=True)
                     conn.update(worksheet="Keuangan", data=df_uang_update)
