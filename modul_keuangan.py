@@ -58,24 +58,30 @@ def jalankan(df_uang, df_pemasaran, conn):
                                 df_uang.loc[idx, 'Status'] = 'Valid'
                                 conn.update(worksheet="Keuangan", data=df_uang)
                                 
-                                # 2. LOGIKA BARU: Pelacak ID Order Kebal Spasi!
+                                # 2. LOGIKA BARU: Pelacak ID Order yang LEBIH KUAT
                                 ket = str(row['Keterangan'])
                                 if "ORD-" in ket:
                                     try:
-                                        # Potong string dengan aman dan buang semua spasi gaib
-                                        id_ekstrak = ket.split("ORD-")[1].split(" ")[0].replace(")", "").strip()
-                                        id_order_pasti = "ORD-" + id_ekstrak
+                                        # Pakai Regex atau ekstraksi substring yang aman
+                                        # Cari kata yang mulai dengan ORD- sampai spasi atau tanda kurung berikutnya
+                                        import re
+                                        match = re.search(r'ORD-\d+', ket)
                                         
-                                        # Paksa hapus spasi di database pemasaran biar cocok 100%
-                                        df_pemasaran['ID Order'] = df_pemasaran['ID Order'].astype(str).str.strip()
-                                        
-                                        if id_order_pasti in df_pemasaran['ID Order'].values:
-                                            # Tembak statusnya jadi "Sedang Diproses"
-                                            df_pemasaran.loc[df_pemasaran['ID Order'] == id_order_pasti, 'Status Validasi'] = 'Sedang Diproses'
-                                            conn.update(worksheet="Pemasaran", data=df_pemasaran)
+                                        if match:
+                                            id_order_pasti = match.group()
+                                            
+                                            # Paksa hapus spasi di database pemasaran biar cocok 100%
+                                            df_pemasaran['ID Order'] = df_pemasaran['ID Order'].astype(str).str.strip()
+                                            
+                                            if id_order_pasti in df_pemasaran['ID Order'].values:
+                                                # Tembak statusnya jadi "Sedang Diproses" (Ini Trigger untuk Produksi)
+                                                df_pemasaran.loc[df_pemasaran['ID Order'] == id_order_pasti, 'Status Validasi'] = 'Sedang Diproses'
+                                                conn.update(worksheet="Pemasaran", data=df_pemasaran)
+                                            else:
+                                                st.warning(f"⚠️ Uang tervalidasi, TAPI sistem gagal menemukan {id_order_pasti} di Modul Pemasaran. Harap ubah statusnya ke 'Sedang Diproses' manual di GSheets.")
                                         else:
-                                            # Kalau tetep gagal nemu, munculin peringatan biar ketahuan
-                                            st.warning(f"⚠️ Uang tervalidasi, TAPI sistem gagal menemukan {id_order_pasti} di Modul Pemasaran. Harap ubah statusnya ke 'Sedang Diproses' manual di GSheets.")
+                                            st.warning("⚠️ Format ID Order di Keterangan tidak standar. Pesanan tidak bisa otomatis diteruskan ke Produksi.")
+                                            
                                     except Exception as e:
                                         st.error(f"Error pelacakan ID: {e}")
                                 

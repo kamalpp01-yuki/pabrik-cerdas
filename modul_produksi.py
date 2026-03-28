@@ -16,7 +16,8 @@ def jalankan(df_pem, df_prod, df_bahan, df_jadi, df_produk, conn):
             df_produk[bahan] = 0.0 # Bikin kolom baru otomatis jika belum ada
 
     # --- MINI DASHBOARD ---
-    antrean = len(df_pem[df_pem['Status Validasi'] == 'Siap Produksi'])
+    # PERUBAHAN: Menangkap status 'Sedang Diproses' dari hasil Validasi Keuangan
+    antrean = len(df_pem[df_pem['Status Validasi'] == 'Sedang Diproses'])
     tahap_potong = len(df_prod[df_prod['Status Produksi'] == 'Tahap 1: Pemotongan'])
     tahap_jahit = len(df_prod[df_prod['Status Produksi'] == 'Tahap 2: Jahit'])
     tahap_bordir = len(df_prod[df_prod['Status Produksi'] == 'Tahap 3: Bordir & Sablon'])
@@ -43,7 +44,8 @@ def jalankan(df_pem, df_prod, df_bahan, df_jadi, df_produk, conn):
     # ==========================================
     with tab_track:
         st.markdown("### 📡 Radar Pelacakan Pesanan")
-        df_siap = df_pem[df_pem['Status Validasi'] == 'Siap Produksi'].copy()
+        # PERUBAHAN: Menangkap status 'Sedang Diproses'
+        df_siap = df_pem[df_pem['Status Validasi'] == 'Sedang Diproses'].copy()
         if not df_siap.empty:
             df_siap['Status Saat Ini'] = "Antrean (Belum Dipotong)"
             df_siap['ID Produksi'] = "-" 
@@ -88,9 +90,10 @@ def jalankan(df_pem, df_prod, df_bahan, df_jadi, df_produk, conn):
     # ==========================================
     with tab_1:
         st.markdown("### 📦 Pengecekan Bahan & Pemotongan Pola")
-        df_antrean = df_pem[df_pem['Status Validasi'] == 'Siap Produksi']
+        # PERUBAHAN: Menangkap status 'Sedang Diproses'
+        df_antrean = df_pem[df_pem['Status Validasi'] == 'Sedang Diproses']
         
-        if df_antrean.empty: st.info("Tidak ada antrean pesanan baru.")
+        if df_antrean.empty: st.info("Tidak ada antrean pesanan baru yang sudah divalidasi pembayarannya.")
         else:
             for index, row in df_antrean.iterrows():
                 with st.container(border=True): 
