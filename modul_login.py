@@ -95,7 +95,7 @@ def tampilkan_login():
             st.markdown("<div class='login-subtitle'>SISTEM PERENCANAAN SUMBER DAYA</div>", unsafe_allow_html=True)
             
             user = st.text_input("Username", placeholder="Masukkan Username Admin")
-            passw = st.text_input("Password", type="password", placeholder="Masukkan Password")
+            passw = st.text_input("Password", type="password", placeholder="Masukkan Password 123")
             
             submit = st.form_submit_button("Masuk Ke Sistem 🚀", use_container_width=True)
 
