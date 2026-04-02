@@ -94,7 +94,7 @@ def tampilkan_login():
             st.markdown("<div class='login-title'>ERP Konveksi</div>", unsafe_allow_html=True)
             st.markdown("<div class='login-subtitle'>SISTEM PERENCANAAN SUMBER DAYA</div>", unsafe_allow_html=True)
             
-            user = st.text_input("Username", placeholder="Masukkan Username Admin")
+            user = st.text_input("Username", placeholder="Masukkan Username admin")
             passw = st.text_input("Password", type="password", placeholder="Masukkan Password 123")
             
             submit = st.form_submit_button("Masuk Ke Sistem 🚀", use_container_width=True)
